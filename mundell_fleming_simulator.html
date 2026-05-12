@@ -342,6 +342,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('fixed')">Tipo de Cambio Fijo</button>
             <button class="tab-btn" onclick="switchTab('flexible')">Tipo de Cambio Flexible</button>
+            <button class="tab-btn" onclick="switchTab('salterswan')">Salter-Swan</button>
         </div>
         
         <!-- MODELO 1: TIPO DE CAMBIO FIJO -->
@@ -601,6 +602,87 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- MODELO 3: SALTER-SWAN -->
+        <div id="model-salterswan" class="model-section">
+            <h2 style="font-size: 20px; margin-bottom: 15px;">📊 Diagrama Salter-Swan: Balance Interno y Externo</h2>
+            
+            <div class="grid-2-col">
+                <div class="panel">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">Políticas Económicas</h3>
+                    
+                    <div class="control-group">
+                        <label for="sw-A">Absorción Doméstica (A)</label>
+                        <div class="slider-container">
+                            <input type="range" id="sw-A" min="50" max="150" value="100" step="1" oninput="updateSalterSwan()">
+                            <span id="sw-A-val" class="value-tag">100</span>
+                        </div>
+                        <small style="color: var(--text-tertiary); display: block; margin-top: 4px;">Gasto interno: C + I + G</small>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="sw-q">Tipo de Cambio Real (q)</label>
+                        <div class="slider-container">
+                            <input type="range" id="sw-q" min="0.5" max="1.5" value="1.00" step="0.01" oninput="updateSalterSwan()">
+                            <span id="sw-q-val" class="value-tag">1.00</span>
+                        </div>
+                        <small style="color: var(--text-tertiary); display: block; margin-top: 4px;">Competitividad externa</small>
+                    </div>
+                    
+                    <div class="info-box" style="background: rgba(124, 58, 237, 0.1); border-left-color: var(--accent-color);">
+                        <strong>Punto de Equilibrio (Bliss):</strong><br>
+                        A = 100, q = 1.0<br>
+                        <small>IB: Pleno empleo | EB: Balance de pagos equilibrado</small>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <strong style="display: block; margin-bottom: 8px; font-size: 14px;">Escenarios:</strong>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="hist-btn" onclick="setSalterZone('recesion_deficit')" style="flex: 1; min-width: calc(50% - 3px); padding: 6px; font-size: 12px;">Recesión + Déficit</button>
+                            <button class="hist-btn" onclick="setSalterZone('inflacion_deficit')" style="flex: 1; min-width: calc(50% - 3px); padding: 6px; font-size: 12px;">Inflación + Déficit</button>
+                            <button class="hist-btn" onclick="setSalterZone('recesion_superavit')" style="flex: 1; min-width: calc(50% - 3px); padding: 6px; font-size: 12px;">Recesión + Superávit</button>
+                            <button class="hist-btn" onclick="setSalterZone('inflacion_superavit')" style="flex: 1; min-width: calc(50% - 3px); padding: 6px; font-size: 12px;">Inflación + Superávit</button>
+                            <button class="hist-btn" onclick="resetSalterBase()" style="flex: 1; min-width: 100%; padding: 6px; font-size: 12px;">Equilibrio</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">Diagnóstico</h3>
+                    
+                    <div class="result-item">
+                        <span>Zona Actual</span>
+                        <span id="sw-zone" class="result-value" style="color: var(--accent-color);">Equilibrio</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Balance Interno</span>
+                        <span id="sw-ib" class="result-value">En equilibrio</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Balance Externo</span>
+                        <span id="sw-eb" class="result-value">En equilibrio</span>
+                    </div>
+                    
+                    <div class="info-box" id="sw-policy" style="margin-top: 15px;">
+                        <strong>🎯 Política Recomendada:</strong><br>
+                        La economía está en equilibrio interno y externo. No se requiere intervención.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-wrapper" style="margin-top: 20px;">
+                <canvas id="chart-salter"></canvas>
+            </div>
+            
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>📚 Interpretación:</strong><br>
+                <strong style="color: var(--is-color);">Curva IB:</strong> Pendiente negativa. Mayor absorción requiere menor q para mantener pleno empleo.<br>
+                <strong style="color: var(--lm-color);">Curva EB:</strong> Pendiente positiva. Mayor absorción requiere mayor q para sostener BP.<br>
+                <strong>4 Zonas:</strong> (1) Recesión+Déficit SO, (2) Inflación+Déficit NO, (3) Inflación+Superávit NE, (4) Recesión+Superávit SE
             </div>
         </div>
     </div>
@@ -1089,17 +1171,207 @@
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
                 document.getElementById('model-fixed').classList.add('active');
                 setTimeout(updateFixed, 100);
-            } else {
+            } else if (model === 'flexible') {
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
                 document.getElementById('model-flexible').classList.add('active');
                 setTimeout(updateFlexible, 100);
+            } else if (model === 'salterswan') {
+                document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
+                document.getElementById('model-salterswan').classList.add('active');
+                setTimeout(updateSalterSwan, 100);
             }
         }
-        
+
+        // ===== MODELO 3: SALTER-SWAN =====
+        let chartSalter = null;
+
+        function updateSalterSwan() {
+            const A = parseFloat(document.getElementById('sw-A').value);
+            const q = parseFloat(document.getElementById('sw-q').value);
+
+            document.getElementById('sw-A-val').textContent = A;
+            document.getElementById('sw-q-val').textContent = q.toFixed(2);
+
+            // Curvas IB y EB
+            const q_IB = 1.0 - 0.005 * (A - 100);
+            const q_EB = 1.0 + 0.005 * (A - 100);
+
+            // Determinar zona
+            let zone, ib_status, eb_status, policy;
+
+            if (q > q_IB && q > q_EB) {
+                zone = 'Inflación + Superávit';
+                ib_status = 'Presión inflacionaria';
+                eb_status = 'Superávit comercial';
+                policy = 'Reducir A (política contractiva) y reducir q (apreciación)';
+            } else if (q < q_IB && q > q_EB) {
+                zone = 'Recesión + Superávit';
+                ib_status = 'Desempleo/Recesión';
+                eb_status = 'Superávit comercial';
+                policy = 'Aumentar A (expansión fiscal) y reducir q (apreciación)';
+            } else if (q < q_IB && q < q_EB) {
+                zone = 'Recesión + Déficit';
+                ib_status = 'Desempleo/Recesión';
+                eb_status = 'Déficit comercial';
+                policy = 'Aumentar A (expansión fiscal) y aumentar q (depreciación)';
+            } else if (q > q_IB && q < q_EB) {
+                zone = 'Inflación + Déficit';
+                ib_status = 'Presión inflacionaria';
+                eb_status = 'Déficit comercial';
+                policy = 'Reducir A (contracción fiscal) y aumentar q (depreciación)';
+            } else {
+                zone = 'Equilibrio';
+                ib_status = 'En equilibrio (Pleno empleo)';
+                eb_status = 'En equilibrio (BP balanceada)';
+                policy = 'No se requiere intervención. Mantener políticas actuales.';
+            }
+
+            document.getElementById('sw-zone').textContent = zone;
+            document.getElementById('sw-ib').textContent = ib_status;
+            document.getElementById('sw-eb').textContent = eb_status;
+            document.getElementById('sw-policy').innerHTML = '<strong>🎯 Política Recomendada:</strong><br>' + policy;
+
+            drawChartSalter(A, q, q_IB, q_EB);
+        }
+
+        function drawChartSalter(A, q, q_IB, q_EB) {
+            const ctx = document.getElementById('chart-salter').getContext('2d');
+            
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = isDark ? '#94a3b8' : '#475569';
+            const gridColor = isDark ? '#334155' : '#e2e8f0';
+
+            const A_vals = [];
+            const IB_vals = [];
+            const EB_vals = [];
+
+            for (let Ai = 50; Ai <= 150; Ai += 5) {
+                A_vals.push(Ai);
+                IB_vals.push(1.0 - 0.005 * (Ai - 100));
+                EB_vals.push(1.0 + 0.005 * (Ai - 100));
+            }
+
+            if (chartSalter) chartSalter.destroy();
+
+            chartSalter = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: A_vals,
+                    datasets: [
+                        {
+                            label: 'IB (Balance Interno)',
+                            data: IB_vals,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'EB (Balance Externo)',
+                            data: EB_vals,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Diagrama Salter-Swan: Balance Interno vs Externo',
+                            color: textColor,
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: { color: textColor, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': q = ' + context.parsed.y.toFixed(3);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Absorción Doméstica (A)',
+                                color: textColor,
+                                font: { size: 12 }
+                            },
+                            min: 50,
+                            max: 150,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { size: 11 } }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Tipo de Cambio Real (q)',
+                                color: textColor,
+                                font: { size: 12 }
+                            },
+                            min: 0.5,
+                            max: 1.5,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            // Add scatter point for current position
+            chartSalter.data.datasets.push({
+                label: 'Economía Actual',
+                data: [{x: A, y: q}],
+                type: 'scatter',
+                backgroundColor: '#7c3aed',
+                pointRadius: 8,
+                pointHoverRadius: 12
+            });
+            chartSalter.update();
+        }
+
+        function setSalterZone(zoneType) {
+            if (zoneType === 'recesion_deficit') {
+                document.getElementById('sw-A').value = 80;
+                document.getElementById('sw-q').value = 0.85;
+            } else if (zoneType === 'inflacion_deficit') {
+                document.getElementById('sw-A').value = 120;
+                document.getElementById('sw-q').value = 0.90;
+            } else if (zoneType === 'recesion_superavit') {
+                document.getElementById('sw-A').value = 80;
+                document.getElementById('sw-q').value = 1.15;
+            } else if (zoneType === 'inflacion_superavit') {
+                document.getElementById('sw-A').value = 120;
+                document.getElementById('sw-q').value = 1.10;
+            }
+            updateSalterSwan();
+        }
+
+        function resetSalterBase() {
+            document.getElementById('sw-A').value = 100;
+            document.getElementById('sw-q').value = 1.00;
+            updateSalterSwan();
+        }
+
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             updateFixed();
             updateFlexible();
+            updateSalterSwan();
         });
     </script>
 </body>
