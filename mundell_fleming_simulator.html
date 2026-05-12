@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Mundell-Fleming - IS-LM-BP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #94a3b8;
+            --border-primary: #e2e8f0;
+            --border-secondary: #cbd5e1;
+            --is-color: #dc2626;
+            --lm-color: #2563eb;
+            --bp-color: #16a34a;
+            --accent-color: #7c3aed;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0f172a;
+                --bg-secondary: #1e293b;
+                --text-primary: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --text-tertiary: #64748b;
+                --border-primary: #334155;
+                --border-secondary: #475569;
+            }
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+        
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+        
+        .model-section {
+            display: none;
+        }
+        
+        .model-section.active {
+            display: block;
+        }
+        
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .control-group {
+            margin-bottom: 16px;
+        }
+        
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        
+        .control-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-primary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: 2px solid var(--bg-primary);
+        }
+        
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 16px;
+        }
+        
+        .metric-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+        
+        .metric-value {
+            font-size: 20px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .info-box {
+            margin-top: 16px;
+            padding: 14px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+        }
+        
+        .info-title {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .info-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-primary);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .legend-line {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .btn-reset {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-reset:hover {
+            opacity: 0.9;
+        }
+        
+        .hist-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        
+        .hist-btn:hover {
+            background: var(--bg-primary);
+            border-color: var(--border-secondary);
+        }
+        
+        .hist-btn.active {
+            background: var(--bg-primary);
+            border-color: var(--accent-color);
+        }
+        
+        .case-note {
+            display: none;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-top: 8px;
+        }
+        
+        .equations-box {
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            color: var(--text-secondary);
+            line-height: 2;
+            margin-top: auto;
+            padding: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+        }
+        
+        .multiplier-display {
+            background: linear-gradient(135deg, var(--accent-color), #6d28d9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            text-align: center;
+        }
+        
+        .multiplier-value {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .multiplier-label {
+            font-size: 11px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simulador Mundell-Fleming IS-LM-BP</h1>
+        <p class="subtitle">Modelo de economía abierta con movilidad perfecta de capitales</p>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('fixed')">Tipo de Cambio Fijo</button>
+            <button class="tab-btn" onclick="switchTab('flexible')">Tipo de Cambio Flexible</button>
+        </div>
+        
+        <!-- MODELO 1: TIPO DE CAMBIO FIJO -->
+        <div id="model-fixed" class="model-section active">
+            <div class="grid-layout">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="control-group">
+                        <label>
+                            <span>Gasto Público (G)</span>
+                            <span id="val-G" class="control-value">20</span>
+                        </label>
+                        <input type="range" id="slider-G" min="0" max="50" step="1" value="20" oninput="updateFixed()">
+                        <div class="slider-labels"><span>0</span><span>50</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Impuestos (T)</span>
+                            <span id="val-T" class="control-value">20</span>
+                        </label>
+                        <input type="range" id="slider-T" min="0" max="50" step="1" value="20" oninput="updateFixed()">
+                        <div class="slider-labels"><span>0</span><span>50</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Tipo de Cambio (E)</span>
+                            <span id="val-E" class="control-value">10.00</span>
+                        </label>
+                        <input type="range" id="slider-E" min="1" max="20" step="0.5" value="10" oninput="updateFixed()">
+                        <div class="slider-labels"><span>1</span><span>20</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Tasa Interés Mundial (r*)</span>
+                            <span id="val-rstar" class="control-value">5.0%</span>
+                        </label>
+                        <input type="range" id="slider-rstar" min="0" max="15" step="0.5" value="5" oninput="updateFixed()">
+                        <div class="slider-labels"><span>0%</span><span>15%</span></div>
+                    </div>
+                    
+                    <button class="btn-reset" onclick="resetFixed()">
+                        ↻ Restablecer Valores Base (G=20, T=20, E=10, r*=5%)
+                    </button>
+                    
+                    <div style="border-top: 1px solid var(--border-primary); padding-top: 12px;">
+                        <div style="font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.06em; margin-bottom: 8px;">CASOS HISTÓRICOS (+5 pts)</div>
+                        <button class="hist-btn" onclick="loadCaseFixed('bo')">
+                            <div style="font-weight: 500; font-size: 12px;">Bolivia 2015</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=35, T=25, E=6.9, r*=6%</div>
+                        </button>
+                        <button class="hist-btn" onclick="loadCaseFixed('ve')">
+                            <div style="font-weight: 500; font-size: 12px;">Venezuela 2014</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=45, T=15, E=6.3, r*=8%</div>
+                        </button>
+                        <button class="hist-btn" onclick="loadCaseFixed('no')">
+                            <div style="font-weight: 500; font-size: 12px;">Noruega 1980</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=25, T=30, E=8.5, r*=4%</div>
+                        </button>
+                        <div id="case-note-fixed" class="case-note"></div>
+                    </div>
+                    
+                    <div class="multiplier-display">
+                        <div class="multiplier-value" id="multiplier-k">2.50</div>
+                        <div class="multiplier-label">Multiplicador Keynesiano k = 1/(1-c₁+m₁)</div>
+                    </div>
+                    
+                    <div class="equations-box">
+                        <div style="color: var(--text-tertiary); letter-spacing: 0.06em; margin-bottom: 6px;">ECUACIONES</div>
+                        <div><span style="color: var(--is-color);">IS:</span> r = (A + x₁E − Y(1−c₁+m₁))/b</div>
+                        <div><span style="color: var(--lm-color);">LM:</span> r = (kY − M)/h</div>
+                        <div><span style="color: var(--bp-color);">BP:</span> r = r*</div>
+                        <div>A = c₀ − c₁T + I₀ + G + NX₀</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="chart-container">
+                        <canvas id="chart-fixed"></canvas>
+                    </div>
+                    
+                    <div class="legend">
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--is-color);"></span>
+                            Curva IS (Mercado de Bienes)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--lm-color);"></span>
+                            Curva LM (Mercado de Dinero)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--bp-color);"></span>
+                            Curva BP (Balanza de Pagos)
+                        </span>
+                        <span class="legend-item">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: var(--accent-color); display: inline-block;"></span>
+                            Equilibrio
+                        </span>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Producto (Y)</div>
+                            <div class="metric-value" id="met-Y">100.0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Tasa Interés (r)</div>
+                            <div class="metric-value" id="met-r">5.0%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Oferta Monetaria (M)</div>
+                            <div class="metric-value" id="met-M">40.0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Exportaciones Netas (NX)</div>
+                            <div class="metric-value" id="met-NX">0.0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-box">
+                        <div class="info-title">Mecanismo de Ajuste - Tipo de Cambio Fijo</div>
+                        <div class="info-text" id="mechanism-fixed">
+                            Con tipo de cambio fijo, el banco central debe intervenir para mantener E constante. 
+                            Un aumento en G desplaza IS hacia la derecha, aumentando Y. Para mantener r = r*, 
+                            el banco central expande M, desplazando LM hasta el nuevo equilibrio.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODELO 2: TIPO DE CAMBIO FLEXIBLE -->
+        <div id="model-flexible" class="model-section">
+            <div class="grid-layout">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="control-group">
+                        <label>
+                            <span>Gasto Público (G)</span>
+                            <span id="val-G-f" class="control-value">20</span>
+                        </label>
+                        <input type="range" id="slider-G-f" min="0" max="50" step="1" value="20" oninput="updateFlexible()">
+                        <div class="slider-labels"><span>0</span><span>50</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Impuestos (T)</span>
+                            <span id="val-T-f" class="control-value">20</span>
+                        </label>
+                        <input type="range" id="slider-T-f" min="0" max="50" step="1" value="20" oninput="updateFlexible()">
+                        <div class="slider-labels"><span>0</span><span>50</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Oferta Monetaria (M)</span>
+                            <span id="val-M-f" class="control-value">40.0</span>
+                        </label>
+                        <input type="range" id="slider-M-f" min="10" max="100" step="1" value="40" oninput="updateFlexible()">
+                        <div class="slider-labels"><span>10</span><span>100</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Tasa Interés Mundial (r*)</span>
+                            <span id="val-rstar-f" class="control-value">5.0%</span>
+                        </label>
+                        <input type="range" id="slider-rstar-f" min="0" max="15" step="0.5" value="5" oninput="updateFlexible()">
+                        <div class="slider-labels"><span>0%</span><span>15%</span></div>
+                    </div>
+                    
+                    <button class="btn-reset" onclick="resetFlexible()">
+                        ↻ Restablecer Valores Base
+                    </button>
+                    
+                    <div style="border-top: 1px solid var(--border-primary); padding-top: 12px;">
+                        <div style="font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.06em; margin-bottom: 8px;">CASOS HISTÓRICOS</div>
+                        <button class="hist-btn" onclick="loadCaseFlexible('bo')">
+                            <div style="font-weight: 500; font-size: 12px;">Bolivia 2015</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=35, T=25, M=50, r*=6%</div>
+                        </button>
+                        <button class="hist-btn" onclick="loadCaseFlexible('ve')">
+                            <div style="font-weight: 500; font-size: 12px;">Venezuela 2014</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=45, T=15, M=30, r*=8%</div>
+                        </button>
+                        <button class="hist-btn" onclick="loadCaseFlexible('no')">
+                            <div style="font-weight: 500; font-size: 12px;">Noruega 1980</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">G=25, T=30, M=55, r*=4%</div>
+                        </button>
+                        <div id="case-note-flexible" class="case-note"></div>
+                    </div>
+                    
+                    <div class="multiplier-display">
+                        <div class="multiplier-value" id="multiplier-k-f">2.50</div>
+                        <div class="multiplier-label">Multiplicador Keynesiano k = 1/(1-c₁+m₁)</div>
+                    </div>
+                    
+                    <div class="equations-box">
+                        <div style="color: var(--text-tertiary); letter-spacing: 0.06em; margin-bottom: 6px;">ECUACIONES</div>
+                        <div><span style="color: var(--is-color);">IS:</span> r = (A + x₁E − Y(1−c₁+m₁))/b</div>
+                        <div><span style="color: var(--lm-color);">LM:</span> r = (kY − M)/h</div>
+                        <div><span style="color: var(--bp-color);">BP:</span> r = r*</div>
+                        <div>E = [(1−c₁+m₁)Y + br* − A]/x₁</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="chart-container">
+                        <canvas id="chart-flexible"></canvas>
+                    </div>
+                    
+                    <div class="legend">
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--is-color);"></span>
+                            Curva IS (Mercado de Bienes)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--lm-color);"></span>
+                            Curva LM (Mercado de Dinero)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line" style="background: var(--bp-color);"></span>
+                            Curva BP (Balanza de Pagos)
+                        </span>
+                        <span class="legend-item">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: var(--accent-color); display: inline-block;"></span>
+                            Equilibrio
+                        </span>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Producto (Y)</div>
+                            <div class="metric-value" id="met-Y-f">100.0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Tasa Interés (r)</div>
+                            <div class="metric-value" id="met-r-f">5.0%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Tipo de Cambio (E)</div>
+                            <div class="metric-value" id="met-E-f">10.00</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Exportaciones Netas (NX)</div>
+                            <div class="metric-value" id="met-NX-f">0.0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-box">
+                        <div class="info-title">Mecanismo de Ajuste - Tipo de Cambio Flexible</div>
+                        <div class="info-text" id="mechanism-flexible">
+                            Con tipo de cambio flexible, E se ajusta endógenamente para equilibrar la balanza de pagos.
+                            Un aumento en M reduce r, causando depreciación (E↑), lo que estimula exportaciones netas
+                            y desplaza IS hasta restablecer r = r*. La política monetaria es efectiva.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Parámetros estructurales del modelo
+        // Calibrados para obtener Y=100, E=10, M≈50 en equilibrio base
+        const c0 = 10;      // Consumo autónomo
+        const c1 = 0.75;    // Propensión marginal a consumir
+        const m1 = 0.15;    // Propensión marginal a importar
+        const x1 = 1.50;    // Sensibilidad de exportaciones al tipo de cambio
+        const b = 2.00;     // Sensibilidad de inversión a tasa de interés
+        const k_money = 0.50; // Sensibilidad demanda dinero al ingreso
+        const h = 2.00;     // Sensibilidad demanda dinero a tasa de interés
+        const I0 = 15;      // Inversión autónoma (ajustada para calibración)
+        const NX0 = -4.9;   // Exportaciones netas autónomas (ajustadas)
+        
+        // Multiplicador keynesiano: k = 1/(1-c₁+m₁) = 1/(1-0.75+0.15) = 2.50
+        const multiplier = 1 / (1 - c1 + m1);
+        
+        // Variables globales para gráficos
+        let chartFixed = null;
+        let chartFlexible = null;
+        
+        // Función para calcular gasto autónomo A
+        function calcA(G, T) {
+            return c0 - c1 * T + I0 + G + NX0;
+        }
+        
+        // MODELO 1: TIPO DE CAMBIO FIJO
+        function updateFixed() {
+            const G = parseFloat(document.getElementById('slider-G').value);
+            const T = parseFloat(document.getElementById('slider-T').value);
+            const E = parseFloat(document.getElementById('slider-E').value);
+            const rstar = parseFloat(document.getElementById('slider-rstar').value) / 100;
+            
+            // Actualizar valores mostrados
+            document.getElementById('val-G').textContent = G;
+            document.getElementById('val-T').textContent = T;
+            document.getElementById('val-E').textContent = E.toFixed(2);
+            document.getElementById('val-rstar').textContent = (rstar * 100).toFixed(1) + '%';
+            document.getElementById('multiplier-k').textContent = multiplier.toFixed(2);
+            
+            // Calcular equilibrio
+            const A = calcA(G, T);
+            const Y = multiplier * (A + x1 * E - b * rstar);
+            const r = rstar; // En equilibrio con movilidad perfecta
+            const M = k_money * Y - h * r;
+            const NX = NX0 + x1 * E - m1 * Y;
+            
+            // Actualizar métricas
+            document.getElementById('met-Y').textContent = Y.toFixed(1);
+            document.getElementById('met-r').textContent = (r * 100).toFixed(1) + '%';
+            document.getElementById('met-M').textContent = M.toFixed(1);
+            document.getElementById('met-NX').textContent = NX.toFixed(1);
+            
+            // Actualar mecanismo
+            updateMechanismFixed(G, T, E, rstar, Y, M, NX);
+            
+            // Actualizar gráfico
+            updateChartFixed(A, E, rstar, Y, r);
+        }
+        
+        function updateMechanismFixed(G, T, E, rstar, Y, M, NX) {
+            let text = '';
+            if (G > 25) {
+                text = `Política fiscal expansiva (G=${G}). El gasto público elevado desplaza IS derecha → Y aumenta a ${Y.toFixed(1)}. 
+                       Para mantener r = ${(rstar*100).toFixed(1)}%, el banco central expande oferta monetaria a M=${M.toFixed(1)}. 
+                       NX = ${NX.toFixed(1)} (positivo si hay superávit comercial).`;
+            } else if (G < 15) {
+                text = `Política fiscal contractiva (G=${G}). El gasto reducido desplaza IS izquierda → Y disminuye a ${Y.toFixed(1)}. 
+                       Para mantener r = ${(rstar*100).toFixed(1)}%, el banco central contrae oferta monetaria a M=${M.toFixed(1)}. 
+                       Efecto multiplicador: ΔY = ${multiplier.toFixed(2)} × ΔG.`;
+            } else {
+                text = `Equilibrio base con G=${G}, T=${T}, E=${E.toFixed(1)}, r*=${(rstar*100).toFixed(1)}%. 
+                       Producto de equilibrio Y=${Y.toFixed(1)}, Oferta monetaria M=${M.toFixed(1)}. 
+                       Con tipo de cambio fijo, la política fiscal es efectiva porque el banco central ajusta M endógenamente.`;
+            }
+            document.getElementById('mechanism-fixed').textContent = text;
+        }
+        
+        function updateChartFixed(A, E, rstar, Y_eq, r_eq) {
+            // Generar puntos para curvas
+            const Y_min = 0, Y_max = 200;
+            const r_min = 0, r_max = 0.20;
+            
+            // IS: r = (A + x1*E - Y*(1-c1+m1)) / b
+            const isPoints = [];
+            for (let Y = Y_min; Y <= Y_max; Y += 5) {
+                const r = (A + x1 * E - Y * (1 - c1 + m1)) / b;
+                if (r >= r_min && r <= r_max) {
+                    isPoints.push({x: Y, y: r});
+                }
+            }
+            
+            // LM: r = (k*Y - M) / h, donde M se calcula del equilibrio
+            const M = k_money * Y_eq - h * r_eq;
+            const lmPoints = [];
+            for (let Y = Y_min; Y <= Y_max; Y += 5) {
+                const r = (k_money * Y - M) / h;
+                if (r >= r_min && r <= r_max) {
+                    lmPoints.push({x: Y, y: r});
+                }
+            }
+            
+            // BP: r = r* (horizontal)
+            const bpPoints = [
+                {x: Y_min, y: rstar},
+                {x: Y_max, y: rstar}
+            ];
+            
+            const data = {
+                datasets: [
+                    {
+                        label: 'IS',
+                        data: isPoints,
+                        borderColor: '#dc2626',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'LM',
+                        data: lmPoints,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'BP',
+                        data: bpPoints,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5,
+                        borderDash: [5, 5]
+                    },
+                    {
+                        label: 'Equilibrio',
+                        data: [{x: Y_eq, y: r_eq}],
+                        backgroundColor: '#7c3aed',
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        pointRadius: 8,
+                        showLine: false
+                    }
+                ]
+            };
+            
+            const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = isDark ? '#94a3b8' : '#475569';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            
+            const config = {
+                type: 'scatter',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    if (ctx.datasetIndex === 3) {
+                                        return `Equilibrio: Y=${ctx.raw.x.toFixed(1)}, r=${(ctx.raw.y*100).toFixed(1)}%`;
+                                    }
+                                    return `${ctx.dataset.label}: Y=${ctx.raw.x.toFixed(1)}, r=${(ctx.raw.y*100).toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: Y_min,
+                            max: Y_max,
+                            title: { display: true, text: 'Producto (Y)', color: textColor, font: { size: 12 } },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { size: 11 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            min: r_min,
+                            max: r_max,
+                            title: { display: true, text: 'Tasa de Interés (r)', color: textColor, font: { size: 12 } },
+                            grid: { color: gridColor },
+                            ticks: { 
+                                color: textColor, 
+                                font: { size: 11 },
+                                callback: (val) => (val * 100).toFixed(0) + '%'
+                            }
+                        }
+                    }
+                }
+            };
+            
+            if (chartFixed) {
+                chartFixed.destroy();
+            }
+            chartFixed = new Chart(document.getElementById('chart-fixed'), config);
+        }
+        
+        function resetFixed() {
+            document.getElementById('slider-G').value = 20;
+            document.getElementById('slider-T').value = 20;
+            document.getElementById('slider-E').value = 10;
+            document.getElementById('slider-rstar').value = 5;
+            document.getElementById('case-note-fixed').style.display = 'none';
+            document.querySelectorAll('#model-fixed .hist-btn').forEach(b => b.classList.remove('active'));
+            updateFixed();
+        }
+        
+        function loadCaseFixed(caseType) {
+            document.querySelectorAll('#model-fixed .hist-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('.hist-btn').classList.add('active');
+            
+            const noteEl = document.getElementById('case-note-fixed');
+            let note = '';
+            
+            if (caseType === 'bo') {
+                document.getElementById('slider-G').value = 35;
+                document.getElementById('slider-T').value = 25;
+                document.getElementById('slider-E').value = 6.9;
+                document.getElementById('slider-rstar').value = 6;
+                note = 'Bolivia 2015: Fin del superciclo de commodities. Gasto fiscal alto financiado con reservas internacionales en declive. Tipo de cambio fijo sobrevaluado.';
+            } else if (caseType === 've') {
+                document.getElementById('slider-G').value = 45;
+                document.getElementById('slider-T').value = 15;
+                document.getElementById('slider-E').value = 6.3;
+                document.getElementById('slider-rstar').value = 8;
+                note = 'Venezuela 2014: Colapso petrolero con control cambiario. Gasto público insostenible y tipo de cambio fijo sobrevaluado. Crisis terminal de balanza de pagos.';
+            } else if (caseType === 'no') {
+                document.getElementById('slider-G').value = 25;
+                document.getElementById('slider-T').value = 30;
+                document.getElementById('slider-E').value = 8.5;
+                document.getElementById('slider-rstar').value = 4;
+                note = 'Noruega 1980: Ajuste fiscal post-boom petrolero. Disciplina fiscal con tipo de cambio competitivo. Evitó enfermedad holandesa exitosamente.';
+            }
+            
+            noteEl.textContent = note;
+            noteEl.style.display = 'block';
+            updateFixed();
+        }
+        
+        // MODELO 2: TIPO DE CAMBIO FLEXIBLE
+        function updateFlexible() {
+            const G = parseFloat(document.getElementById('slider-G-f').value);
+            const T = parseFloat(document.getElementById('slider-T-f').value);
+            const M = parseFloat(document.getElementById('slider-M-f').value);
+            const rstar = parseFloat(document.getElementById('slider-rstar-f').value) / 100;
+            
+            // Actualizar valores mostrados
+            document.getElementById('val-G-f').textContent = G;
+            document.getElementById('val-T-f').textContent = T;
+            document.getElementById('val-M-f').textContent = M.toFixed(1);
+            document.getElementById('val-rstar-f').textContent = (rstar * 100).toFixed(1) + '%';
+            document.getElementById('multiplier-k-f').textContent = multiplier.toFixed(2);
+            
+            // Calcular equilibrio
+            // Con E flexible: Y está determinado por LM y BP
+            // LM: r = (kY - M)/h, BP: r = r*
+            // Entonces: r* = (kY - M)/h → Y = (M + h*r*)/k
+            const Y = (M + h * rstar) / k_money;
+            const r = rstar;
+            
+            // E se ajusta para equilibrar IS con este Y y r
+            // IS: r = (A + x1*E - Y*(1-c1+m1))/b
+            // Despejando E: E = (b*r + Y*(1-c1+m1) - A) / x1
+            const A = calcA(G, T);
+            const E = (b * r + Y * (1 - c1 + m1) - A) / x1;
+            
+            const NX = NX0 + x1 * E - m1 * Y;
+            
+            // Actualizar métricas
+            document.getElementById('met-Y-f').textContent = Y.toFixed(1);
+            document.getElementById('met-r-f').textContent = (r * 100).toFixed(1) + '%';
+            document.getElementById('met-E-f').textContent = E.toFixed(2);
+            document.getElementById('met-NX-f').textContent = NX.toFixed(1);
+            
+            // Actualar mecanismo
+            updateMechanismFlexible(G, T, M, rstar, Y, E, NX);
+            
+            // Actualizar gráfico
+            updateChartFlexible(A, E, rstar, Y, r, M);
+        }
+        
+        function updateMechanismFlexible(G, T, M, rstar, Y, E, NX) {
+            let text = '';
+            if (M > 50) {
+                text = `Política monetaria expansiva (M=${M}). Mayor oferta monetaria reduce r inicialmente → salida de capitales → depreciación (E=${E.toFixed(2)}). 
+                       La depreciación estimula exportaciones netas (NX=${NX.toFixed(1)}), desplazando IS derecha hasta Y=${Y.toFixed(1)}. 
+                       Política monetaria es efectiva con tipo de cambio flexible.`;
+            } else if (M < 35) {
+                text = `Política monetaria contractiva (M=${M}). Menor oferta monetaria aumenta r inicialmente → entrada de capitales → apreciación (E=${E.toFixed(2)}). 
+                       La apreciación reduce exportaciones netas (NX=${NX.toFixed(1)}), desplazando IS izquierda hasta Y=${Y.toFixed(1)}.`;
+            } else if (G > 25 || G < 15) {
+                text = `Cambio fiscal (G=${G}) con tipo de cambio flexible. Cualquier presión sobre r genera flujos de capital que ajustan E automáticamente. 
+                       El tipo de cambio actúa como amortiguador: si G↑, E se aprecia para mantener r=r*. Resultado: Y poco sensible a política fiscal.`;
+            } else {
+                text = `Equilibrio base con G=${G}, T=${T}, M=${M.toFixed(1)}, r*=${(rstar*100).toFixed(1)}%. 
+                       Tipo de cambio endógeno E=${E.toFixed(2)} equilibra balanza de pagos. 
+                       Producto Y=${Y.toFixed(1)} determinado por mercado monetario. Política monetaria efectiva, fiscal inefectiva.`;
+            }
+            document.getElementById('mechanism-flexible').textContent = text;
+        }
+        
+        function updateChartFlexible(A, E, rstar, Y_eq, r_eq, M) {
+            const Y_min = 0, Y_max = 200;
+            const r_min = 0, r_max = 0.20;
+            
+            // IS con E endógeno
+            const isPoints = [];
+            for (let Y = Y_min; Y <= Y_max; Y += 5) {
+                const r = (A + x1 * E - Y * (1 - c1 + m1)) / b;
+                if (r >= r_min && r <= r_max) {
+                    isPoints.push({x: Y, y: r});
+                }
+            }
+            
+            // LM: r = (k*Y - M) / h
+            const lmPoints = [];
+            for (let Y = Y_min; Y <= Y_max; Y += 5) {
+                const r = (k_money * Y - M) / h;
+                if (r >= r_min && r <= r_max) {
+                    lmPoints.push({x: Y, y: r});
+                }
+            }
+            
+            // BP: r = r* (horizontal)
+            const bpPoints = [
+                {x: Y_min, y: rstar},
+                {x: Y_max, y: rstar}
+            ];
+            
+            const data = {
+                datasets: [
+                    {
+                        label: 'IS',
+                        data: isPoints,
+                        borderColor: '#dc2626',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'LM',
+                        data: lmPoints,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'BP',
+                        data: bpPoints,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'transparent',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5,
+                        borderDash: [5, 5]
+                    },
+                    {
+                        label: 'Equilibrio',
+                        data: [{x: Y_eq, y: r_eq}],
+                        backgroundColor: '#7c3aed',
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        pointRadius: 8,
+                        showLine: false
+                    }
+                ]
+            };
+            
+            const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = isDark ? '#94a3b8' : '#475569';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            
+            const config = {
+                type: 'scatter',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    if (ctx.datasetIndex === 3) {
+                                        return `Equilibrio: Y=${ctx.raw.x.toFixed(1)}, r=${(ctx.raw.y*100).toFixed(1)}%, E=${E.toFixed(2)}`;
+                                    }
+                                    return `${ctx.dataset.label}: Y=${ctx.raw.x.toFixed(1)}, r=${(ctx.raw.y*100).toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: Y_min,
+                            max: Y_max,
+                            title: { display: true, text: 'Producto (Y)', color: textColor, font: { size: 12 } },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { size: 11 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            min: r_min,
+                            max: r_max,
+                            title: { display: true, text: 'Tasa de Interés (r)', color: textColor, font: { size: 12 } },
+                            grid: { color: gridColor },
+                            ticks: { 
+                                color: textColor, 
+                                font: { size: 11 },
+                                callback: (val) => (val * 100).toFixed(0) + '%'
+                            }
+                        }
+                    }
+                }
+            };
+            
+            if (chartFlexible) {
+                chartFlexible.destroy();
+            }
+            chartFlexible = new Chart(document.getElementById('chart-flexible'), config);
+        }
+        
+        function resetFlexible() {
+            document.getElementById('slider-G-f').value = 20;
+            document.getElementById('slider-T-f').value = 20;
+            document.getElementById('slider-M-f').value = 40;
+            document.getElementById('slider-rstar-f').value = 5;
+            document.getElementById('case-note-flexible').style.display = 'none';
+            document.querySelectorAll('#model-flexible .hist-btn').forEach(b => b.classList.remove('active'));
+            updateFlexible();
+        }
+        
+        function loadCaseFlexible(caseType) {
+            document.querySelectorAll('#model-flexible .hist-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('.hist-btn').classList.add('active');
+            
+            const noteEl = document.getElementById('case-note-flexible');
+            let note = '';
+            
+            if (caseType === 'bo') {
+                document.getElementById('slider-G-f').value = 35;
+                document.getElementById('slider-T-f').value = 25;
+                document.getElementById('slider-M-f').value = 50;
+                document.getElementById('slider-rstar-f').value = 6;
+                note = 'Bolivia 2015: Escenario hipotético con tipo de cambio flexible. Mayor gasto fiscal con expansión monetaria moderada.';
+            } else if (caseType === 've') {
+                document.getElementById('slider-G-f').value = 45;
+                document.getElementById('slider-T-f').value = 15;
+                document.getElementById('slider-M-f').value = 30;
+                document.getElementById('slider-rstar-f').value = 8;
+                note = 'Venezuela 2014: Escenario hipotético flexible. Gasto alto con restricción monetaria llevaría a apreciación extrema del tipo de cambio.';
+            } else if (caseType === 'no') {
+                document.getElementById('slider-G-f').value = 25;
+                document.getElementById('slider-T-f').value = 30;
+                document.getElementById('slider-M-f').value = 55;
+                document.getElementById('slider-rstar-f').value = 4;
+                note = 'Noruega 1980: Política fiscal conservadora con expansión monetaria. Tipo de cambio flexible habría permitido mayor competitividad.';
+            }
+            
+            noteEl.textContent = note;
+            noteEl.style.display = 'block';
+            updateFlexible();
+        }
+        
+        // Función para cambiar entre pestañas
+        function switchTab(model) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.model-section').forEach(section => section.classList.remove('active'));
+            
+            if (model === 'fixed') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('model-fixed').classList.add('active');
+                setTimeout(updateFixed, 100);
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('model-flexible').classList.add('active');
+                setTimeout(updateFlexible, 100);
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateFixed();
+            updateFlexible();
+        });
+    </script>
+</body>
+</html>
