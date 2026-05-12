@@ -3,42 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Mundell-Fleming & Salter-Swan</title>
+    <title>Simulador Mundell-Fleming</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --bg: #f8f9fa; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: var(--primary); margin-bottom: 30px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .tab-btn { padding: 10px 20px; border: none; background: #eee; cursor: pointer; border-radius: 5px; font-weight: bold; transition: 0.3s; }
         .tab-btn.active { background: var(--accent); color: white; }
-        .modelo-content { display: none; animation: fadeIn 0.5s; }
+        .modelo-content { display: none; }
         .modelo-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .grid-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
         .control-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
         .control-card label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary); }
         .slider-container { display: flex; align-items: center; gap: 10px; }
-        input[type="range"] { flex: 1; height: 6px; background: #ddd; border-radius: 3px; outline: none; cursor: pointer; }
-        .value-display { min-width: 60px; text-align: right; font-family: monospace; font-size: 1.1em; color: var(--accent); font-weight: bold; }
-        .results-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; background: #e8f4fc; padding: 20px; border-radius: 8px; border: 1px solid #bde0fe; }
+        input[type="range"] { flex: 1; height: 6px; background: #ddd; border-radius: 3px; outline: none; }
+        .value-display { min-width: 60px; text-align: right; font-family: monospace; font-size: 1.1em; color: var(--accent); }
+        .results-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; background: #e8f4fc; padding: 20px; border-radius: 8px; }
         .result-item { text-align: center; }
         .result-label { font-size: 0.9em; color: #666; margin-bottom: 5px; }
         .result-value { font-size: 1.5em; font-weight: bold; color: var(--primary); }
-        .chart-container { position: relative; height: 400px; margin-bottom: 25px; background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
-        .explanation-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin-top: 20px; line-height: 1.6; }
+        .chart-container { position: relative; height: 400px; margin-bottom: 25px; }
+        .explanation-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin-top: 20px; }
         .historical-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .case-btn { padding: 15px; background: white; border: 2px solid var(--accent); border-radius: 8px; cursor: pointer; transition: 0.3s; text-align: center; font-weight: bold; color: var(--accent); }
+        .case-btn { padding: 15px; background: white; border: 2px solid var(--accent); border-radius: 8px; cursor: pointer; transition: 0.3s; text-align: center; }
         .case-btn:hover { background: var(--accent); color: white; transform: translateY(-2px); }
-        .params-toggle { margin-bottom: 15px; background: #6c757d; color: white; }
-        .advanced-params { display: none; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; background: #f0f0f0; padding: 15px; border-radius: 8px; }
-        .advanced-params.show { display: grid; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🌍 Simulador de Política Económica</h1>
+    <h1>🌍 Simulador Mundell-Fleming</h1>
     
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('fijo')">Tipo de Cambio Fijo</button>
@@ -48,33 +44,37 @@
 
     <!-- MODELO 1: TIPO DE CAMBIO FIJO -->
     <div id="fijo" class="modelo-content active">
-        <h2>Modelo MF: Tipo de Cambio Fijo</h2>
-        <p>El Banco Central interviene para mantener <strong>E</strong> constante. La política monetaria es endógena (se ajusta automáticamente).</p>
+        <h2>Modelo MF con Tipo de Cambio Fijo</h2>
+        <p>El Banco Central interviene para mantener E constante. La política monetaria es endógena.</p>
         
-        <button class="tab-btn params-toggle" onclick="toggleParams()">⚙️ Parámetros Estructurales</button>
-        <div id="params-fijo" class="advanced-params">
-            <div class="control-card"><label>c₁ (Propensión a consumir)</label><div class="slider-container"><input type="range" id="c1" min="0.5" max="0.9" step="0.05" value="0.75" oninput="updateParams()"><span class="value-display" id="c1-val">0.75</span></div></div>
-            <div class="control-card"><label>m₁ (Propensión a importar)</label><div class="slider-container"><input type="range" id="m1" min="0.05" max="0.3" step="0.05" value="0.15" oninput="updateParams()"><span class="value-display" id="m1-val">0.15</span></div></div>
-            <div class="control-card"><label>x₁ (Sensibilidad Exportaciones)</label><div class="slider-container"><input type="range" id="x1" min="0.5" max="2.5" step="0.1" value="1.5" oninput="updateParams()"><span class="value-display" id="x1-val">1.5</span></div></div>
-            <div class="control-card"><label>b (Sensibilidad Inversión)</label><div class="slider-container"><input type="range" id="b_param" min="1" max="4" step="0.5" value="2" oninput="updateParams()"><span class="value-display" id="b-param-val">2</span></div></div>
-        </div>
-
         <div class="grid-controls">
             <div class="control-card">
                 <label>Gasto Público (G)</label>
-                <div class="slider-container"><input type="range" id="G-fijo" min="10" max="40" value="20" oninput="updateFijo()"><span class="value-display" id="G-fijo-val">20</span></div>
+                <div class="slider-container">
+                    <input type="range" id="G-fijo" min="10" max="40" value="20" oninput="updateFijo()">
+                    <span class="value-display" id="G-fijo-val">20</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Impuestos (T)</label>
-                <div class="slider-container"><input type="range" id="T-fijo" min="10" max="40" value="20" oninput="updateFijo()"><span class="value-display" id="T-fijo-val">20</span></div>
+                <div class="slider-container">
+                    <input type="range" id="T-fijo" min="10" max="40" value="20" oninput="updateFijo()">
+                    <span class="value-display" id="T-fijo-val">20</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Tipo de Cambio (E)</label>
-                <div class="slider-container"><input type="range" id="E-fijo" min="5" max="15" value="10" oninput="updateFijo()"><span class="value-display" id="E-fijo-val">10</span></div>
+                <div class="slider-container">
+                    <input type="range" id="E-fijo" min="5" max="15" value="10" oninput="updateFijo()">
+                    <span class="value-display" id="E-fijo-val">10</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Tasa Interés Mundial (r*)</label>
-                <div class="slider-container"><input type="range" id="r-fijo" min="2" max="8" step="0.5" value="5" oninput="updateFijo()"><span class="value-display" id="r-fijo-val">5%</span></div>
+                <div class="slider-container">
+                    <input type="range" id="r-fijo" min="2" max="8" step="0.5" value="5" oninput="updateFijo()">
+                    <span class="value-display" id="r-fijo-val">5%</span>
+                </div>
             </div>
         </div>
 
@@ -91,35 +91,41 @@
         <div class="explanation-box">
             <strong>Mecanismo:</strong> Al ser E fijo, r = r*. Un aumento en G desplaza IS → derecha. Para mantener r=r*, el BC debe aumentar M (desplazar LM derecha). El multiplicador es máximo: ΔY = k · ΔG.
         </div>
-
-        <div class="historical-cases">
-            <div class="case-btn" onclick="applyCase('bolivia')">🇧🇴 Bolivia 2015<br><small>Estable cambiario</small></div>
-            <div class="case-btn" onclick="applyCase('china')">🇨🇳 China 2020<br><small>Control de capitales</small></div>
-            <div class="case-btn" onclick="applyCase('argentina')">🇦🇷 Argentina 2019<br><small>Cepo cambiario</small></div>
-        </div>
     </div>
 
     <!-- MODELO 2: TIPO DE CAMBIO FLEXIBLE -->
     <div id="flexible" class="modelo-content">
-        <h2>Modelo MF: Tipo de Cambio Flexible</h2>
-        <p>El tipo de cambio se ajusta para equilibrar la BP. La oferta monetaria (M) es exógena (fija del BC).</p>
+        <h2>Modelo MF con Tipo de Cambio Flexible</h2>
+        <p>El tipo de cambio se ajusta para equilibrar la BP. La oferta monetaria es exógena.</p>
         
         <div class="grid-controls">
             <div class="control-card">
                 <label>Gasto Público (G)</label>
-                <div class="slider-container"><input type="range" id="G-flex" min="10" max="40" value="20" oninput="updateFlexible()"><span class="value-display" id="G-flex-val">20</span></div>
+                <div class="slider-container">
+                    <input type="range" id="G-flex" min="10" max="40" value="20" oninput="updateFlexible()">
+                    <span class="value-display" id="G-flex-val">20</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Impuestos (T)</label>
-                <div class="slider-container"><input type="range" id="T-flex" min="10" max="40" value="20" oninput="updateFlexible()"><span class="value-display" id="T-flex-val">20</span></div>
+                <div class="slider-container">
+                    <input type="range" id="T-flex" min="10" max="40" value="20" oninput="updateFlexible()">
+                    <span class="value-display" id="T-flex-val">20</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Oferta Monetaria (M)</label>
-                <div class="slider-container"><input type="range" id="M-flex" min="20" max="60" value="40" oninput="updateFlexible()"><span class="value-display" id="M-flex-val">40</span></div>
+                <div class="slider-container">
+                    <input type="range" id="M-flex" min="20" max="60" value="40" oninput="updateFlexible()">
+                    <span class="value-display" id="M-flex-val">40</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Tasa Interés Mundial (r*)</label>
-                <div class="slider-container"><input type="range" id="r-flex" min="2" max="8" step="0.5" value="5" oninput="updateFlexible()"><span class="value-display" id="r-flex-val">5%</span></div>
+                <div class="slider-container">
+                    <input type="range" id="r-flex" min="2" max="8" step="0.5" value="5" oninput="updateFlexible()">
+                    <span class="value-display" id="r-flex-val">5%</span>
+                </div>
             </div>
         </div>
 
@@ -145,11 +151,17 @@
         <div class="grid-controls">
             <div class="control-card">
                 <label>Gasto de Absorción (A)</label>
-                <div class="slider-container"><input type="range" id="A-ss" min="80" max="120" value="100" oninput="updateSalter()"><span class="value-display" id="A-ss-val">100</span></div>
+                <div class="slider-container">
+                    <input type="range" id="A-ss" min="80" max="120" value="100" oninput="updateSalter()">
+                    <span class="value-display" id="A-ss-val">100</span>
+                </div>
             </div>
             <div class="control-card">
                 <label>Tipo de Cambio Real (q)</label>
-                <div class="slider-container"><input type="range" id="q-ss" min="0.5" max="1.5" step="0.05" value="1.0" oninput="updateSalter()"><span class="value-display" id="q-ss-val">1.00</span></div>
+                <div class="slider-container">
+                    <input type="range" id="q-ss" min="0.5" max="1.5" step="0.05" value="1.0" oninput="updateSalter()">
+                    <span class="value-display" id="q-ss-val">1.00</span>
+                </div>
             </div>
         </div>
 
@@ -181,32 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSalter();
 });
 
-function toggleParams() {
-    document.getElementById('params-fijo').classList.toggle('show');
-}
-
-function updateParams() {
-    params.c1 = parseFloat(document.getElementById('c1').value);
-    params.m1 = parseFloat(document.getElementById('m1').value);
-    params.x1 = parseFloat(document.getElementById('x1').value);
-    params.b = parseFloat(document.getElementById('b_param').value);
-    
-    document.getElementById('c1-val').textContent = params.c1;
-    document.getElementById('m1-val').textContent = params.m1;
-    document.getElementById('x1-val').textContent = params.x1;
-    document.getElementById('b-param-val').textContent = params.b;
-    
-    updateFijo();
-    updateFlexible();
-}
-
 function switchTab(tabId) {
     document.querySelectorAll('.modelo-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     event.target.classList.add('active');
     
-    // Redraw charts when tab becomes visible to fix rendering issues
+    // Redibujar gráficos al cambiar de pestaña para evitar errores de tamaño
     setTimeout(() => {
         if(charts.fijo) charts.fijo.resize();
         if(charts.flex) charts.flex.resize();
@@ -219,10 +212,9 @@ function initCharts() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            x: { title: {display:true, text:'Ingreso (Y) / Absorción (A)'}, beginAtZero: false },
+            x: { title: {display:true, text:'Ingreso (Y) / Absorción'}, type: 'linear', position: 'bottom' },
             y: { title: {display:true, text:'Tasa (r) / TCR (q)'}, beginAtZero: false }
-        },
-        plugins: { legend: { position: 'top' } }
+        }
     };
 
     // Chart Fijo
@@ -277,30 +269,46 @@ function updateFijo() {
     document.getElementById('M-fijo').textContent = M.toFixed(1);
     document.getElementById('NX-fijo').textContent = NX.toFixed(1);
     
-    // Gráfico IS-LM-BP
-    const r_max = 10;
-    const IS_y_intercept = (A + params.x1*E)/params.b;
-    const IS_slope = -(1-params.c1+params.m1)/params.b;
+    // Gráfico IS-LM-BP corregido
+    const r_min = 0, r_max = 10;
+    // IS: r = (A + x1*E - (1-c1+m1)Y) / b
+    const is_y1 = 0, is_r1 = (A + params.x1*E) / params.b;
+    const is_y2 = 200, is_r2 = (A + params.x1*E - (1-params.c1+params.m1)*is_y2) / params.b;
     
-    const IS_points = [
-        {x:0, y:IS_y_intercept}, 
-        {x:Y, y:r_star}, 
-        {x:Math.max(0, (IS_y_intercept - 2)/Math.abs(IS_slope)), y:2}
-    ];
+    // LM: r = (kY - M) / h
+    const lm_y1 = (M + params.h*r_min) / params.k, lm_r1 = r_min;
+    const lm_y2 = (M + params.h*r_max) / params.k, lm_r2 = r_max;
     
-    const LM_points = [
-        {x:(M + params.h*r_max)/params.k, y:r_max}, 
-        {x:Y, y:r_star}, 
-        {x:(M - params.h*2)/params.k, y:2}
-    ];
-    
-    const BP_points = [{x:0, y:r_star}, {x:150, y:r_star}];
-    
+    // BP: r = r*
+    const bp_y1 = 0, bp_y2 = 200;
+
     charts.fijo.data = {
         datasets: [
-            {label:'IS', data:IS_points, borderColor:'#e74c3c', borderWidth:2, fill:false, tension:0},
-            {label:'LM', data:LM_points, borderColor:'#3498db', borderWidth:2, fill:false, tension:0},
-            {label:'BP', data:BP_points, borderColor:'#2ecc71', borderWidth:2, borderDash:[5,5], fill:false, tension:0}
+            {
+                label: 'IS',
+                data: [{x: is_y1, y: is_r1}, {x: is_y2, y: is_r2}],
+                borderColor: '#e74c3c',
+                borderWidth: 2,
+                fill: false,
+                tension: 0
+            },
+            {
+                label: 'LM',
+                data: [{x: lm_y1, y: lm_r1}, {x: lm_y2, y: lm_r2}],
+                borderColor: '#3498db',
+                borderWidth: 2,
+                fill: false,
+                tension: 0
+            },
+            {
+                label: 'BP',
+                data: [{x: bp_y1, y: r_star}, {x: bp_y2, y: r_star}],
+                borderColor: '#2ecc71',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0
+            }
         ]
     };
     charts.fijo.update();
@@ -321,31 +329,49 @@ function updateFlexible() {
     const Y = (M + params.h * r_star) / params.k;
     // E endógeno para equilibrar IS
     const A = 10 + G - params.c1 * T;
-    const numerator = (1 - params.c1 + params.m1) * Y + params.b * r_star - A;
-    const E = numerator / params.x1;
+    const E = ((1 - params.c1 + params.m1) * Y + params.b * r_star - A) / params.x1;
     const NX = params.x1 * E - params.m1 * Y;
     
     document.getElementById('Y-flex').textContent = Y.toFixed(1);
-    document.getElementById('E-flex').textContent = Math.max(0, E).toFixed(2);
+    document.getElementById('E-flex').textContent = E.toFixed(2);
     document.getElementById('r-flex-res').textContent = r_star.toFixed(1) + '%';
     document.getElementById('NX-flex').textContent = NX.toFixed(1);
     
     // Gráfico
-    const r_max = 10;
-    const A_val = 10 + G - params.c1 * T;
-    const E_val = Math.max(0.1, E); // Evitar negativos en gráfico
+    const r_min = 0, r_max = 10;
+    const is_y1 = 0, is_r1 = (A + params.x1*E) / params.b;
+    const is_y2 = 200, is_r2 = (A + params.x1*E - (1-params.c1+params.m1)*is_y2) / params.b;
     
-    const IS_y_int = (A_val + params.x1*E_val)/params.b;
-    const IS_pts = [{x:0, y:IS_y_int}, {x:Y, y:r_star}, {x:Y*1.5, y:IS_y_int - (1-params.c1+params.m1)*(Y*1.5)/params.b}];
-    
-    const LM_pts = [{x:(M + params.h*r_max)/params.k, y:r_max}, {x:Y, y:r_star}, {x:(M - params.h*2)/params.k, y:2}];
-    const BP_pts = [{x:0, y:r_star}, {x:150, y:r_star}];
-    
+    const lm_y1 = (M + params.h*r_min) / params.k, lm_r1 = r_min;
+    const lm_y2 = (M + params.h*r_max) / params.k, lm_r2 = r_max;
+
     charts.flex.data = {
         datasets: [
-            {label:'IS', data:IS_pts, borderColor:'#e74c3c', borderWidth:2, fill:false, tension:0},
-            {label:'LM', data:LM_pts, borderColor:'#3498db', borderWidth:2, fill:false, tension:0},
-            {label:'BP', data:BP_pts, borderColor:'#2ecc71', borderWidth:2, borderDash:[5,5], fill:false, tension:0}
+            {
+                label: 'IS',
+                data: [{x: is_y1, y: is_r1}, {x: is_y2, y: is_r2}],
+                borderColor: '#e74c3c',
+                borderWidth: 2,
+                fill: false,
+                tension: 0
+            },
+            {
+                label: 'LM',
+                data: [{x: lm_y1, y: lm_r1}, {x: lm_y2, y: lm_r2}],
+                borderColor: '#3498db',
+                borderWidth: 2,
+                fill: false,
+                tension: 0
+            },
+            {
+                label: 'BP',
+                data: [{x: 0, y: r_star}, {x: 200, y: r_star}],
+                borderColor: '#2ecc71',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0
+            }
         ]
     };
     charts.flex.update();
@@ -380,34 +406,30 @@ function updateSalter() {
     
     charts.salter.data = {
         datasets: [
-            {label:'IB (Interno)', data:ib_points, borderColor:'#e74c3c', showLine:true, borderWidth:2},
-            {label:'EB (Externo)', data:eb_points, borderColor:'#3498db', showLine:true, borderWidth:2},
-            {label:'Actual', data:[{x:A, y:q}], backgroundColor:'#2ecc71', pointRadius:8, pointHoverRadius:10}
+            {
+                label: 'IB',
+                data: ib_points,
+                borderColor: '#e74c3c',
+                showLine: true,
+                fill: false
+            },
+            {
+                label: 'EB',
+                data: eb_points,
+                borderColor: '#3498db',
+                showLine: true,
+                fill: false
+            },
+            {
+                label: 'Actual',
+                data: [{x:A, y:q}],
+                backgroundColor: '#2ecc71',
+                pointRadius: 8,
+                showLine: false
+            }
         ]
     };
     charts.salter.update();
-}
-
-function applyCase(caseName) {
-    switchTab('fijo');
-    if(caseName === 'bolivia') {
-        document.getElementById('G-fijo').value = 25;
-        document.getElementById('E-fijo').value = 6.9;
-        document.getElementById('r-fijo').value = 4.5;
-        updateFijo();
-        alert("Bolivia 2015: Tipo de cambio fijo estable (6.96 Bs/$), reservas altas por commodities.");
-    } else if(caseName === 'china') {
-        document.getElementById('G-fijo').value = 30;
-        document.getElementById('E-fijo').value = 6.5;
-        updateFijo();
-        alert("China: Control de capitales + tipo de cambio administrado para promover exportaciones.");
-    } else if(caseName === 'argentina') {
-        document.getElementById('G-fijo').value = 28;
-        document.getElementById('T-fijo').value = 22;
-        document.getElementById('E-fijo').value = 40; // Valor simbólico
-        updateFijo();
-        alert("Argentina 2019: Cepo cambiario con múltiples tipos de cambio. Fuga de capitales.");
-    }
 }
 </script>
 </body>
