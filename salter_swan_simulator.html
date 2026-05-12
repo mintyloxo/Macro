@@ -1,0 +1,287 @@
+
+<h2 class="sr-only">Simulador de Salter-Swan: diagrama interactivo de balance interno y externo con zonas de política económica</h2>
+
+<style>
+.hist-btn {
+  display: block; width: 100%; text-align: left;
+  background: transparent;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  padding: 6px 10px; margin-bottom: 6px;
+  cursor: pointer; color: var(--color-text-primary);
+}
+.hist-btn:hover { background: var(--color-background-secondary); }
+.hist-btn.active {
+  border-color: var(--color-border-secondary);
+  background: var(--color-background-secondary);
+}
+.kcard {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+}
+.panel {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 12px 14px;
+}
+</style>
+
+<div id="zone-banner" style="border-radius: var(--border-radius-md); padding: 10px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+  <div>
+    <div id="zone-label" style="font-size: 18px; font-weight: 500;"></div>
+    <div id="zone-diag" style="font-size: 13px; margin-top: 2px;"></div>
+  </div>
+  <div style="text-align:right;">
+    <div id="zone-dir" style="font-size: 20px; font-weight: 500; font-family: var(--font-mono); letter-spacing: 4px;"></div>
+    <div id="zone-ps" style="font-size: 11px; margin-top: 2px;"></div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 210px minmax(0,1fr); gap: 14px;">
+
+  <div style="display:flex; flex-direction:column; gap:12px;">
+
+    <div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; align-items:baseline;">
+        <label for="sliderA" style="font-size:13px; color:var(--color-text-secondary);">Absorción A</label>
+        <span id="valA" style="font-size:15px; font-weight:500; font-family:var(--font-mono);">100</span>
+      </div>
+      <input type="range" id="sliderA" min="40" max="160" step="1" value="100" style="width:100%;" oninput="handleChange()">
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--color-text-tertiary); margin-top:2px;"><span>40</span><span>160</span></div>
+    </div>
+
+    <div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; align-items:baseline;">
+        <label for="sliderQ" style="font-size:13px; color:var(--color-text-secondary);">Tipo de Cambio Real q</label>
+        <span id="valQ" style="font-size:15px; font-weight:500; font-family:var(--font-mono);">1.00</span>
+      </div>
+      <input type="range" id="sliderQ" min="0.10" max="2.00" step="0.01" value="1.00" style="width:100%;" oninput="handleChange()">
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--color-text-tertiary); margin-top:2px;"><span>0.10</span><span>2.00</span></div>
+    </div>
+
+    <button onclick="resetBase()" style="font-size:12px;"><i class="ti ti-refresh" aria-hidden="true"></i> E* (100, 1.0)</button>
+
+    <div style="border-top: 0.5px solid var(--color-border-tertiary); padding-top:12px;">
+      <div style="font-size:10px; color:var(--color-text-tertiary); letter-spacing:0.06em; margin-bottom:8px;">CASOS HISTÓRICOS</div>
+      <button class="hist-btn" id="btn-bo" onclick="loadCase(128,0.75,'btn-bo','Fin del superciclo de commodities. Alta absorción fiscal financiada con reservas en declive, tipo de cambio fijo sobrevaluado.')">
+        <div style="font-weight:500; font-size:12px;">Bolivia 2015</div>
+        <div style="font-size:11px; color:var(--color-text-tertiary);">A = 128 · q = 0.75</div>
+      </button>
+      <button class="hist-btn" id="btn-ve" onclick="loadCase(150,0.35,'btn-ve','Colapso del petróleo con control cambiario. Sobrevaluación extrema del bolívar. Crisis terminal de balanza de pagos.')">
+        <div style="font-weight:500; font-size:12px;">Venezuela 2014</div>
+        <div style="font-size:11px; color:var(--color-text-tertiary);">A = 150 · q = 0.35</div>
+      </button>
+      <button class="hist-btn" id="btn-no" onclick="loadCase(80,1.50,'btn-no','Ajuste fiscal post-boom petrolero. TCR competitivo que evitó la enfermedad holandesa. Caso exitoso de gestión macroeconómica.')">
+        <div style="font-weight:500; font-size:12px;">Noruega 1980</div>
+        <div style="font-size:11px; color:var(--color-text-tertiary);">A = 80 · q = 1.50</div>
+      </button>
+      <div id="case-note" style="display:none; font-size:11px; color:var(--color-text-secondary); line-height:1.6; background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:8px 10px; margin-top:2px;"></div>
+    </div>
+
+    <div class="kcard" style="font-size:11px; font-family:var(--font-mono); color:var(--color-text-secondary); line-height:2; margin-top:auto;">
+      <div style="font-size:10px; color:var(--color-text-tertiary); letter-spacing:0.06em; margin-bottom:6px;">ECUACIONES</div>
+      <div><span style="color:#1D9E75;">q_IB</span> = 1 − 0.005·(A−100)</div>
+      <div><span style="color:#BA7517;">q_EB</span> = 1 + 0.005·(A−100)</div>
+      <div>E* = (100, 1.0)</div>
+    </div>
+
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:10px;">
+
+    <div class="panel" style="padding:10px;">
+      <div style="position:relative; height:260px;">
+        <canvas id="ssChart" role="img" aria-label="Diagrama de Salter-Swan con curva IB de pendiente negativa y curva EB de pendiente positiva cruzándose en E*=(100,1.0)">Curva IB (pendiente negativa) y EB (pendiente positiva) que se cruzan en el Bliss Point E* = (A=100, q=1.00).</canvas>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:14px; margin-top:8px; padding-top:8px; border-top:0.5px solid var(--color-border-tertiary); font-size:11px; color:var(--color-text-secondary);">
+        <span style="display:flex; align-items:center; gap:5px;"><span style="width:22px; height:2.5px; background:#1D9E75; display:inline-block; border-radius:2px;"></span>IB — Balance Interno</span>
+        <span style="display:flex; align-items:center; gap:5px;"><span style="width:22px; height:2.5px; background:#BA7517; display:inline-block; border-radius:2px;"></span>EB — Balance Externo</span>
+        <span style="display:flex; align-items:center; gap:5px;"><span id="bliss-legend" style="width:9px; height:9px; border-radius:50%; display:inline-block;"></span>E* Bliss Point</span>
+        <span style="display:flex; align-items:center; gap:5px;"><span id="pt-legend" style="width:11px; height:11px; border-radius:50%; display:inline-block;"></span>Posición actual</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
+      <div class="kcard" style="text-align:center;">
+        <div style="font-size:11px; color:var(--color-text-tertiary); margin-bottom:3px;">A</div>
+        <div id="metA" style="font-size:20px; font-weight:500; font-family:var(--font-mono);">100</div>
+      </div>
+      <div class="kcard" style="text-align:center;">
+        <div style="font-size:11px; color:var(--color-text-tertiary); margin-bottom:3px;">q</div>
+        <div id="metQ" style="font-size:20px; font-weight:500; font-family:var(--font-mono);">1.00</div>
+      </div>
+      <div class="kcard" style="text-align:center;">
+        <div style="font-size:11px; color:#1D9E75; margin-bottom:3px;">q*_IB</div>
+        <div id="metIB" style="font-size:20px; font-weight:500; font-family:var(--font-mono); color:#1D9E75;">1.000</div>
+      </div>
+      <div class="kcard" style="text-align:center;">
+        <div style="font-size:11px; color:#BA7517; margin-bottom:3px;">q*_EB</div>
+        <div id="metEB" style="font-size:20px; font-weight:500; font-family:var(--font-mono); color:#BA7517;">1.000</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="font-size:10px; color:var(--color-text-tertiary); letter-spacing:0.06em; margin-bottom:6px;">POLÍTICA RECOMENDADA</div>
+      <div id="policy-text" style="font-size:13px; color:var(--color-text-primary); line-height:1.6;"></div>
+    </div>
+
+    <div class="panel">
+      <div style="font-size:10px; color:var(--color-text-tertiary); letter-spacing:0.06em; margin-bottom:6px;">MECANISMO ECONÓMICO</div>
+      <div id="mech-text" style="font-size:13px; color:var(--color-text-secondary); line-height:1.6;"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const tc = isDark ? '#64748b' : '#64748b';
+const gc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+const ZONES = {
+  I: {
+    label:'Zona I', diag:'Inflación · Superávit', dir:'A↓   q↓', ps:'Contraer · Apreciar',
+    policy:'Política fiscal contractiva (reducir gasto o aumentar impuestos) combinada con apreciación del tipo de cambio real para reducir presiones inflacionarias y eliminar el superávit.',
+    mech:'El exceso de demanda interna presiona los precios. La balanza de pagos muestra superávit porque el TCR competitivo mantiene exportaciones netas por encima del nivel de equilibrio.',
+    fill: isDark?'#633806':'#FAEEDA', text: isDark?'#FAC775':'#854F0B', pt:'#BA7517'
+  },
+  II: {
+    label:'Zona II', diag:'Recesión · Superávit', dir:'A↑   q↓', ps:'Expandir · Apreciar',
+    policy:'Política fiscal expansiva (mayor gasto o menores impuestos) para cerrar la brecha recesiva, con apreciación cambiaria para eliminar el superávit externo.',
+    mech:'Demanda insuficiente genera desempleo. El TCR elevado favorece exportaciones netas generando superávit externo, pero la economía opera por debajo de su potencial productivo.',
+    fill: isDark?'#26215C':'#EEEDFE', text: isDark?'#CECBF6':'#3C3489', pt:'#534AB7'
+  },
+  III: {
+    label:'Zona III', diag:'Recesión · Déficit', dir:'A↑   q↑', ps:'Expandir · Depreciar',
+    policy:'Política fiscal expansiva para cerrar la brecha recesiva y depreciación cambiaria para mejorar la competitividad externa y eliminar el déficit de balanza de pagos.',
+    mech:'Doble desequilibrio: la baja demanda coexiste con un TCR sobrevaluado que deprime exportaciones y estimula importaciones, generando un déficit externo estructural.',
+    fill: isDark?'#3C3489':'#EEEDFE', text: isDark?'#AFA9EC':'#26215C', pt:'#7F77DD'
+  },
+  IV: {
+    label:'Zona IV', diag:'Inflación · Déficit', dir:'A↓   q↑', ps:'Contraer · Depreciar',
+    policy:'Política fiscal contractiva para reducir presiones inflacionarias y depreciación cambiaria para mejorar la balanza comercial. Combinación más difícil de implementar políticamente.',
+    mech:'Sobrecalentamiento con vulnerabilidad externa. La alta absorción presiona precios e impulsa importaciones generando déficit que puede derivar en crisis cambiaria si no se corrige.',
+    fill: isDark?'#501313':'#FCEBEB', text: isDark?'#F7C1C1':'#A32D2D', pt:'#E24B4A'
+  }
+};
+
+function qIB(a){ return +(1.0 - 0.005*(a-100)).toFixed(4); }
+function qEB(a){ return +(1.0 + 0.005*(a-100)).toFixed(4); }
+function getZone(a,q){
+  const aIB = q > qIB(a), aEB = q > qEB(a);
+  if( aIB &&  aEB) return 'I';
+  if(!aIB &&  aEB) return 'II';
+  if(!aIB && !aEB) return 'III';
+  return 'IV';
+}
+
+const ibD=[], ebD=[];
+for(let a=40;a<=160;a+=2){ ibD.push({x:a,y:qIB(a)}); ebD.push({x:a,y:qEB(a)}); }
+
+const blissC = isDark?'#e2e8f0':'#1e293b';
+document.getElementById('bliss-legend').style.backgroundColor = blissC;
+
+const ctx = document.getElementById('ssChart').getContext('2d');
+const chart = new Chart(ctx,{
+  type:'scatter',
+  data:{ datasets:[
+    { label:'IB', data:ibD, borderColor:'#1D9E75', backgroundColor:'transparent', showLine:true, pointRadius:0, borderWidth:2.5, tension:0 },
+    { label:'EB', data:ebD, borderColor:'#BA7517', backgroundColor:'transparent', showLine:true, pointRadius:0, borderWidth:2.5, tension:0 },
+    { label:'E*', data:[{x:100,y:1.0}], backgroundColor:blissC, borderColor:'transparent', borderWidth:0, pointRadius:7, showLine:false },
+    { label:'Pos', data:[{x:100,y:1.0}], backgroundColor:'#BA7517', borderColor:isDark?'#1e293b':'#ffffff', borderWidth:2, pointRadius:10, showLine:false }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          label:(c)=>{
+            if(c.datasetIndex===2) return 'E* — Bliss Point (100, 1.00)';
+            if(c.datasetIndex===3) return `(A=${c.raw.x}, q=${c.raw.y.toFixed(2)}) — ${ZONES[getZone(c.raw.x,c.raw.y)].label}`;
+            return `${c.dataset.label}: q = ${c.raw.y.toFixed(3)}`;
+          }
+        },
+        backgroundColor: isDark?'#1e293b':'#f8fafc',
+        titleColor: isDark?'#f1f5f9':'#0f172a',
+        bodyColor: isDark?'#94a3b8':'#475569',
+        borderColor: isDark?'#334155':'#e2e8f0',
+        borderWidth:1
+      }
+    },
+    scales:{
+      x:{ type:'linear', min:40, max:160,
+          title:{display:true, text:'Absorción interna (A)', color:tc, font:{size:11}},
+          grid:{color:gc}, ticks:{color:tc, font:{size:10}, stepSize:20} },
+      y:{ type:'linear', min:0.1, max:2.0,
+          title:{display:true, text:'Tipo de Cambio Real (q)', color:tc, font:{size:11}},
+          grid:{color:gc}, ticks:{color:tc, font:{size:10}} }
+    }
+  }
+});
+
+function updateAll(){
+  const A=+document.getElementById('sliderA').value;
+  const q=+document.getElementById('sliderQ').value;
+
+  document.getElementById('valA').textContent=A;
+  document.getElementById('valQ').textContent=q.toFixed(2);
+  document.getElementById('metA').textContent=A;
+  document.getElementById('metQ').textContent=q.toFixed(2);
+  document.getElementById('metIB').textContent=qIB(A).toFixed(3);
+  document.getElementById('metEB').textContent=qEB(A).toFixed(3);
+
+  const zone=getZone(A,q), z=ZONES[zone];
+
+  const banner=document.getElementById('zone-banner');
+  banner.style.backgroundColor=z.fill;
+  ['zone-label','zone-diag','zone-dir','zone-ps'].forEach(id=>{
+    document.getElementById(id).style.color=z.text;
+  });
+  document.getElementById('zone-label').textContent=z.label;
+  document.getElementById('zone-diag').textContent=z.diag;
+  document.getElementById('zone-dir').textContent=z.dir;
+  document.getElementById('zone-ps').textContent=z.ps;
+
+  chart.data.datasets[3].data=[{x:A,y:q}];
+  chart.data.datasets[3].backgroundColor=z.pt;
+  chart.update();
+  document.getElementById('pt-legend').style.backgroundColor=z.pt;
+  document.getElementById('policy-text').textContent=z.policy;
+  document.getElementById('mech-text').textContent=z.mech;
+
+  if(Math.abs(A-100)<2 && Math.abs(q-1.0)<0.02){
+    document.getElementById('zone-label').textContent='Bliss Point alcanzado';
+    document.getElementById('zone-diag').textContent='Equilibrio interno y externo simultáneo';
+  }
+}
+
+function handleChange(){
+  document.querySelectorAll('.hist-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('case-note').style.display='none';
+  updateAll();
+}
+
+function loadCase(a,q,id,note){
+  document.getElementById('sliderA').value=a;
+  document.getElementById('sliderQ').value=q;
+  document.querySelectorAll('.hist-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const n=document.getElementById('case-note');
+  n.textContent=note; n.style.display='block';
+  updateAll();
+}
+
+function resetBase(){
+  document.getElementById('sliderA').value=100;
+  document.getElementById('sliderQ').value=1.0;
+  document.querySelectorAll('.hist-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('case-note').style.display='none';
+  updateAll();
+}
+
+updateAll();
+</script>
