@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MF: Tipo de Cambio Flexible</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f4f6f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .control-group { background: #ecf0f1; padding: 10px; border-radius: 5px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type=range] { width: 100%; }
+        .results { display: flex; justify-content: space-around; background: #fef9e7; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .result-item { text-align: center; }
+        .val { font-size: 1.5em; font-weight: bold; color: #d35400; }
+        canvas { max-height: 400px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Mundell-Fleming: Tipo de Cambio Flexible</h2>
+    <p>La oferta monetaria (M) es fija. El tipo de cambio (E) se ajusta para equilibrar la BP.</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Gasto Público (G): <span id="val-G">20</span></label>
+            <input type="range" id="G" min="10" max="40" value="20" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Impuestos (T): <span id="val-T">20</span></label>
+            <input type="range" id="T" min="10" max="40" value="20" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Oferta Monetaria (M): <span id="val-M">40</span></label>
+            <input type="range" id="M" min="20" max="80" value="40" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Tasa Mundial (r*): <span id="val-r">5</span>%</label>
+            <input type="range" id="r" min="2" max="10" step="0.5" value="5" oninput="calc()">
+        </div>
+    </div>
+
+    <div class="results">
+        <div class="result-item">Y (Ingreso)<br><span id="res-Y" class="val">100</span></div>
+        <div class="result-item">E (Tipo Cambio)<br><span id="res-E" class="val">10.0</span></div>
+        <div class="result-item">NX (Balanza)<br><span id="res-NX" class="val">0</span></div>
+        <div class="result-item">r Interna<br><span id="res-r" class="val">5%</span></div>
+    </div>
+
+    <canvas id="chartMF"></canvas>
+</div>
+
+<script>
+    const c1 = 0.75, m1 = 0.15, x1 = 1.5, b = 2.0, k = 0.5, h = 2.0;
+    let chart;
+
+    function initChart() {
+        const ctx = document.getElementById('chartMF').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { title: {display: true, text: 'Ingreso (Y)'}, min: 0, max: 200 },
+                    y: { title: {display: true, text: 'Tasa de Interés (r)'}, min: 0, max: 15 }
+                }
+            }
+        });
+    }
+
+    function calc() {
+        const G = parseFloat(document.getElementById('G').value);
+        const T = parseFloat(document.getElementById('T').value);
+        const M_fix = parseFloat(document.getElementById('M').value);
+        const r_star = parseFloat(document.getElementById('r').value);
+
+        document.getElementById('val-G').innerText = G;
+        document.getElementById('val-T').innerText = T;
+        document.getElementById('val-M').innerText = M_fix;
+        document.getElementById('val-r').innerText = r_star;
+
+        // 1. Determinar Y desde LM (porque M es fijo y r=r*)
+        // M = kY - hr  =>  Y = (M + hr) / k
+        const Y_eq = (M_fix + h * r_star) / k;
+
+        // 2. Determinar E endógeno desde IS para que coincida con ese Y
+        // Y = k_mult * (A + x1*E - b*r)
+        // Despejar E: E = ( (Y/k_mult) - A + b*r ) / x1
+        const A_autonomo = 10 + G - c1*T;
+        const k_mult = 1 / (1 - c1 + m1);
+        
+        const E_eq = ( (Y_eq / k_mult) - A_autonomo + b*r_star ) / x1;
+        
+        const NX = x1*E_eq - m1*Y_eq;
+
+        document.getElementById('res-Y').innerText = Y_eq.toFixed(1);
+        document.getElementById('res-E').innerText = E_eq.toFixed(2);
+        document.getElementById('res-NX').innerText = NX.toFixed(1);
+        document.getElementById('res-r').innerText = r_star + '%';
+
+        // Gráficos
+        // IS (Depende de E calculado)
+        const pointsIS = [
+            {x: 0, y: (A_autonomo + x1*E_eq)/b},
+            {x: Y_eq, y: r_star},
+            {x: 200, y: (A_autonomo + x1*E_eq - (1-c1+m1)*200)/b}
+        ];
+
+        // LM (Fija porque M es fijo)
+        const pointsLM = [
+            {x: 0, y: -M_fix/h},
+            {x: Y_eq, y: r_star},
+            {x: 200, y: (k*200 - M_fix)/h}
+        ];
+
+        // BP
+        const pointsBP = [{x: 0, y: r_star}, {x: 200, y: r_star}];
+
+        chart.data.datasets = [
+            { label: 'IS', data: pointsIS, borderColor: '#e74c3c', borderWidth: 2, fill: false },
+            { label: 'LM', data: pointsLM, borderColor: '#3498db', borderWidth: 2, fill: false },
+            { label: 'BP', data: pointsBP, borderColor: '#2ecc71', borderWidth: 2, borderDash: [5, 5], fill: false }
+        ];
+        chart.update();
+    }
+
+    window.onload = function() { initChart(); calc(); };
+</script>
+</body>
+</html>
