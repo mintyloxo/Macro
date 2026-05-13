@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MF: Tipo de Cambio Fijo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f4f6f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .control-group { background: #ecf0f1; padding: 10px; border-radius: 5px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type=range] { width: 100%; }
+        .results { display: flex; justify-content: space-around; background: #e8f6f3; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .result-item { text-align: center; }
+        .val { font-size: 1.5em; font-weight: bold; color: #27ae60; }
+        canvas { max-height: 400px; }
+        .note { font-size: 0.9em; color: #7f8c8d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Mundell-Fleming: Tipo de Cambio Fijo</h2>
+    <p>El Banco Central ajusta la oferta monetaria (M) para mantener r = r*.</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Gasto Público (G): <span id="val-G">20</span></label>
+            <input type="range" id="G" min="10" max="40" value="20" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Impuestos (T): <span id="val-T">20</span></label>
+            <input type="range" id="T" min="10" max="40" value="20" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Tipo de Cambio (E): <span id="val-E">10</span></label>
+            <input type="range" id="E" min="5" max="15" value="10" oninput="calc()">
+        </div>
+        <div class="control-group">
+            <label>Tasa Mundial (r*): <span id="val-r">5</span>%</label>
+            <input type="range" id="r" min="2" max="10" step="0.5" value="5" oninput="calc()">
+        </div>
+    </div>
+
+    <div class="results">
+        <div class="result-item">Y (Ingreso)<br><span id="res-Y" class="val">100</span></div>
+        <div class="result-item">M (Oferta Monetaria)<br><span id="res-M" class="val">40</span></div>
+        <div class="result-item">NX (Balanza)<br><span id="res-NX" class="val">0</span></div>
+        <div class="result-item">Multiplicador<br><span id="res-K" class="val">2.5</span></div>
+    </div>
+
+    <canvas id="chartMF"></canvas>
+    <p class="note"><strong>Mecanismo:</strong> Al subir G, la presión sobre r obliga al BC a aumentar M para mantener el tipo de cambio fijo, desplazando LM a la derecha.</p>
+</div>
+
+<script>
+    // Parámetros estructurales
+    const c1 = 0.75, m1 = 0.15, x1 = 1.5, b = 2.0, k = 0.5, h = 2.0;
+    let chart;
+
+    function initChart() {
+        const ctx = document.getElementById('chartMF').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { title: {display: true, text: 'Ingreso (Y)'}, min: 0, max: 200 },
+                    y: { title: {display: true, text: 'Tasa de Interés (r)'}, min: 0, max: 15 }
+                },
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false }
+                }
+            }
+        });
+    }
+
+    function calc() {
+        // Leer valores
+        const G = parseFloat(document.getElementById('G').value);
+        const T = parseFloat(document.getElementById('T').value);
+        const E = parseFloat(document.getElementById('E').value);
+        const r_star = parseFloat(document.getElementById('r').value);
+
+        // Actualizar labels
+        document.getElementById('val-G').innerText = G;
+        document.getElementById('val-T').innerText = T;
+        document.getElementById('val-E').innerText = E;
+        document.getElementById('val-r').innerText = r_star;
+
+        // Cálculos Económicos
+        const A_autonomo = 10 + G - c1*T; // 10 es C0+I0 base
+        const Y_eq = (A_autonomo + x1*E - b*r_star) / (1 - c1 + m1);
+        const M_req = k*Y_eq - h*r_star;
+        const NX = x1*E - m1*Y_eq;
+        const mult = 1 / (1 - c1 + m1);
+
+        // Mostrar resultados
+        document.getElementById('res-Y').innerText = Y_eq.toFixed(1);
+        document.getElementById('res-M').innerText = M_req.toFixed(1);
+        document.getElementById('res-NX').innerText = NX.toFixed(1);
+        document.getElementById('res-K').innerText = mult.toFixed(2);
+
+        // Generar puntos para las curvas
+        // IS: r = (A + x1*E - (1-c1+m1)Y) / b
+        const pointsIS = [
+            {x: 0, y: (A_autonomo + x1*E)/b},
+            {x: Y_eq, y: r_star},
+            {x: 200, y: (A_autonomo + x1*E - (1-c1+m1)*200)/b}
+        ];
+
+        // LM: r = (kY - M) / h  -> Usamos M endógeno calculado
+        // Si usamos el M exacto del equilibrio, LM pasa por el punto. 
+        // Para ver la curva, imaginemos un M ligeramente distinto o simplemente trazamos la línea que pasa por (Y, r*) con pendiente k/h
+        // Pendiente LM = k/h = 0.5/2 = 0.25
+        const pointsLM = [
+            {x: 0, y: -M_req/h}, // Intersección teórica
+            {x: Y_eq, y: r_star},
+            {x: 200, y: (k*200 - M_req)/h}
+        ];
+
+        // BP: r = r* (Horizontal)
+        const pointsBP = [
+            {x: 0, y: r_star},
+            {x: 200, y: r_star}
+        ];
+
+        chart.data.datasets = [
+            { label: 'IS', data: pointsIS, borderColor: '#e74c3c', borderWidth: 2, fill: false },
+            { label: 'LM', data: pointsLM, borderColor: '#3498db', borderWidth: 2, fill: false },
+            { label: 'BP', data: pointsBP, borderColor: '#2ecc71', borderWidth: 2, borderDash: [5, 5], fill: false }
+        ];
+        chart.update();
+    }
+
+    window.onload = function() { initChart(); calc(); };
+</script>
+</body>
+</html>
