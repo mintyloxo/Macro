@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Mundell-Fleming: Tipo de Cambio Fijo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --warning: #f39c12; --danger: #c0392b; --light: #ecf0f1; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        h1, h2, h3 { color: var(--primary); text-align: center; }
+        h1 { margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; font-style: italic; }
+        
+        /* Layout */
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+        
+        /* Controls */
+        .controls-section { background: var(--light); padding: 20px; border-radius: 8px; border-left: 5px solid var(--accent); }
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary); }
+        .slider-container { display: flex; align-items: center; gap: 15px; }
+        input[type="range"] { flex: 1; height: 6px; background: #bdc3c7; border-radius: 5px; outline: none; -webkit-appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer; transition: transform 0.1s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        .value-display { min-width: 60px; text-align: right; font-weight: bold; color: var(--accent); font-family: monospace; font-size: 1.1em; }
+        
+        /* Params Toggle */
+        .params-toggle-btn { background: #95a5a6; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 0.9em; }
+        .params-toggle-btn:hover { background: #7f8c8d; }
+        .advanced-params { display: none; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .advanced-params.show { display: grid; }
+        
+        /* Results */
+        .results-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .result-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--accent); }
+        .result-label { font-size: 0.85em; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .result-value { font-size: 1.8em; font-weight: bold; color: var(--primary); margin-top: 5px; }
+        .result-unit { font-size: 0.6em; color: #95a5a6; }
+
+        /* Chart */
+        .chart-container { position: relative; height: 450px; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        /* Info Panels */
+        .info-panel { background: #e8f6f3; border-left: 5px solid var(--success); padding: 20px; border-radius: 5px; margin-top: 20px; }
+        .info-panel h3 { text-align: left; margin-top: 0; color: var(--success); }
+        .effect-item { margin-bottom: 8px; font-size: 0.95em; }
+        .effect-item strong { color: var(--primary); }
+        
+        .recommendation-box { background: #fef9e7; border-left: 5px solid var(--warning); padding: 20px; border-radius: 5px; margin-top: 20px; }
+        .recommendation-box h3 { text-align: left; margin-top: 0; color: var(--warning); }
+        
+        /* Comparison Button & Modal */
+        .compare-btn-container { text-align: center; margin: 30px 0; }
+        .compare-btn { background: var(--primary); color: white; border: none; padding: 12px 25px; font-size: 1em; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
+        .compare-btn:hover { background: #1a252f; }
+        
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 10px; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { color: black; }
+        .comparison-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .input-col { background: #f9f9f9; padding: 15px; border-radius: 8px; }
+        .input-col h4 { margin-top: 0; text-align: center; color: var(--primary); }
+        .run-compare-btn { width: 100%; background: var(--success); color: white; border: none; padding: 12px; font-size: 1.1em; border-radius: 5px; cursor: pointer; margin-top: 15px; }
+        .run-compare-btn:hover { background: #219150; }
+
+        /* Comparison Charts Area */
+        #comparisonChartsArea { display: none; margin-top: 30px; border-top: 2px dashed #bdc3c7; padding-top: 20px; }
+        .comp-chart-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 1000px) { .comp-chart-row { grid-template-columns: 1fr; } }
+        .comp-chart-card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .comp-chart-card h4 { text-align: center; font-size: 0.9em; margin: 5px 0 10px 0; color: #555; }
+        .comp-chart-container { height: 250px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Mundell-Fleming: Tipo de Cambio Fijo</h1>
+    <p class="subtitle">El Banco Central ajusta la oferta monetaria para mantener E constante. r = r*</p>
+
+    <!-- Controles Principales -->
+    <div class="main-grid">
+        <div class="controls-section">
+            <button class="params-toggle-btn" onclick="toggleParams()">⚙️ Parámetros Estructurales</button>
+            
+            <div id="advancedParams" class="advanced-params">
+                <div class="control-group">
+                    <label>c₁ (Propensión a consumir): <span id="val-c1" class="value-display">0.75</span></label>
+                    <input type="range" id="c1" min="0.1" max="0.9" step="0.05" value="0.75" oninput="updateModel()">
+                </div>
+                <div class="control-group">
+                    <label>m₁ (Propensión a importar): <span id="val-m1" class="value-display">0.15</span></label>
+                    <input type="range" id="m1" min="0.05" max="0.5" step="0.05" value="0.15" oninput="updateModel()">
+                </div>
+                <div class="control-group">
+                    <label>b (Sensibilidad Inversión): <span id="val-b" class="value-display">2.0</span></label>
+                    <input type="range" id="b" min="0.5" max="10" step="0.5" value="2.0" oninput="updateModel()">
+                </div>
+                <div class="control-group">
+                    <label>h (Sensibilidad Dinero): <span id="val-h" class="value-display">2.0</span></label>
+                    <input type="range" id="h" min="0.5" max="10" step="0.5" value="2.0" oninput="updateModel()">
+                </div>
+                <div class="control-group">
+                    <label>k (Demanda Dinero Y): <span id="val-k" class="value-display">0.5</span></label>
+                    <input type="range" id="k" min="0.1" max="1.0" step="0.1" value="0.5" oninput="updateModel()">
+                </div>
+                <div class="control-group">
+                    <label>x₁ (Sensibilidad Exportaciones): <span id="val-x1" class="value-display">1.5</span></label>
+                    <input type="range" id="x1" min="0.1" max="5.0" step="0.1" value="1.5" oninput="updateModel()">
+                </div>
+            </div>
+
+            <h3>Política Económica</h3>
+            <div class="control-group">
+                <label>Gasto Público (G): <span id="val-G" class="value-display">20</span></label>
+                <input type="range" id="G" min="0" max="100" value="20" oninput="updateModel()">
+                <small style="color:#7f8c8d">Desplaza IS → Derecha</small>
+            </div>
+            <div class="control-group">
+                <label>Impuestos (T): <span id="val-T" class="value-display">20</span></label>
+                <input type="range" id="T" min="0" max="100" value="20" oninput="updateModel()">
+                <small style="color:#7f8c8d">Desplaza IS → Izquierda</small>
+            </div>
+            <div class="control-group">
+                <label>Tipo de Cambio Fijo (E): <span id="val-E" class="value-display">10</span></label>
+                <input type="range" id="E" min="1" max="50" value="10" oninput="updateModel()">
+                <small style="color:#7f8c8d">Desplaza IS → Derecha (si sube)</small>
+            </div>
+            <div class="control-group">
+                <label>Tasa Interés Mundial (r*): <span id="val-rstar" class="value-display">5</span>%</label>
+                <input type="range" id="rstar" min="0" max="15" step="0.5" value="5" oninput="updateModel()">
+                <small style="color:#7f8c8d">Mueve BP verticalmente / Rota IS</small>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div>
+            <div class="results-panel">
+                <div class="result-card">
+                    <div class="result-label">Ingreso de Equilibrio (Y)</div>
+                    <div class="result-value" id="res-Y">0</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Tasa de Interés (r)</div>
+                    <div class="result-value" id="res-r">0<span class="result-unit">%</span></div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Oferta Monetaria Endógena (M)</div>
+                    <div class="result-value" id="res-M">0</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Balanza Comercial (NX)</div>
+                    <div class="result-value" id="res-NX">0</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Multiplicador (k)</div>
+                    <div class="result-value" id="res-K">0</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Déficit/Superávit Fiscal</div>
+                    <div class="result-value" id="res-Fiscal">0</div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>¿Qué pasa si...?</h3>
+                <div id="effectsList">
+                    <!-- Se llena con JS -->
+                </div>
+            </div>
+
+            <div class="recommendation-box">
+                <h3>Recomendación de Política</h3>
+                <p id="recText">Calculando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico Principal -->
+    <div class="chart-container">
+        <canvas id="mainChart"></canvas>
+    </div>
+
+    <!-- Botón Comparación -->
+    <div class="compare-btn-container">
+        <button class="compare-btn" onclick="openCompareModal()">📊 Generar Gráficas de Movimiento</button>
+    </div>
+
+    <!-- Área de Gráficos de Comparación (Oculta por defecto) -->
+    <div id="comparisonChartsArea">
+        <h2 style="text-align:center; color:var(--primary);">Análisis de Desplazamientos</h2>
+        <div class="comp-chart-row">
+            <div class="comp-chart-card">
+                <h4>1. Desplazamiento de IS<br><small>(LM y BP fijas)</small></h4>
+                <div class="comp-chart-container"><canvas id="chartMoveIS"></canvas></div>
+            </div>
+            <div class="comp-chart-card">
+                <h4>2. Desplazamiento de LM<br><small>(IS y BP fijas)</small></h4>
+                <div class="comp-chart-container"><canvas id="chartMoveLM"></canvas></div>
+            </div>
+            <div class="comp-chart-card">
+                <h4>3. Resultado Final Combinado</h4>
+                <div class="comp-chart-container"><canvas id="chartMoveFinal"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Inputs de Comparación -->
+<div id="compareModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCompareModal()">&times;</span>
+        <h2 style="text-align:center;">Configurar Escenarios de Movimiento</h2>
+        <p>Ingrese los valores iniciales (actuales) y los valores finales deseados para ver cómo se mueven las curvas por separado.</p>
+        
+        <div class="comparison-inputs">
+            <div class="input-col">
+                <h4>Escenario Inicial (Base)</h4>
+                <div class="control-group"><label>G:</label><input type="number" id="init-G" class="comp-input" data-var="G"></div>
+                <div class="control-group"><label>T:</label><input type="number" id="init-T" class="comp-input" data-var="T"></div>
+                <div class="control-group"><label>E:</label><input type="number" id="init-E" class="comp-input" data-var="E"></div>
+                <div class="control-group"><label>r*:</label><input type="number" id="init-rstar" class="comp-input" data-var="rstar"></div>
+            </div>
+            <div class="input-col">
+                <h4>Escenario Final (Nuevo)</h4>
+                <div class="control-group"><label>G:</label><input type="number" id="final-G" class="comp-input" data-var="G"></div>
+                <div class="control-group"><label>T:</label><input type="number" id="final-T" class="comp-input" data-var="T"></div>
+                <div class="control-group"><label>E:</label><input type="number" id="final-E" class="comp-input" data-var="E"></div>
+                <div class="control-group"><label>r*:</label><input type="number" id="final-rstar" class="comp-input" data-var="rstar"></div>
+            </div>
+        </div>
+        <button class="run-compare-btn" onclick="runComparison()">Generar Gráficos de Movimiento</button>
+    </div>
+</div>
+
+<script>
+    // Variables Globales
+    let mainChart;
+    let chartMoveIS, chartMoveLM, chartMoveFinal;
+    
+    // Estado actual
+    let state = {};
+
+    // Inicialización
+    window.onload = function() {
+        initMainChart();
+        updateModel();
+    };
+
+    function toggleParams() {
+        document.getElementById('advancedParams').classList.toggle('show');
+    }
+
+    // Obtener parámetros del DOM
+    function getParams() {
+        return {
+            c1: parseFloat(document.getElementById('c1').value),
+            m1: parseFloat(document.getElementById('m1').value),
+            b: parseFloat(document.getElementById('b').value),
+            h: parseFloat(document.getElementById('h').value),
+            k: parseFloat(document.getElementById('k').value),
+            x1: parseFloat(document.getElementById('x1').value),
+            G: parseFloat(document.getElementById('G').value),
+            T: parseFloat(document.getElementById('T').value),
+            E: parseFloat(document.getElementById('E').value),
+            rstar: parseFloat(document.getElementById('rstar').value)
+        };
+    }
+
+    // Actualizar displays de valores
+    function updateDisplays(p) {
+        ['c1','m1','b','h','k','x1','G','T','E'].forEach(key => {
+            const el = document.getElementById(`val-${key}`);
+            if(el) el.textContent = p[key];
+        });
+        document.getElementById('val-rstar').textContent = p.rstar + '%';
+    }
+
+    // Cálculos Económicos
+    function calculateEquilibrium(p) {
+        // Multiplicador
+        const multiplier = 1 / (1 - p.c1 + p.m1);
+        
+        // Gasto Autónomo (Asumimos c0 + I0 = 10 para simplificar, o podríamos hacerlo variable)
+        const A_autonomous = 10 + p.G - p.c1 * p.T; 
+        
+        // En Tipo de Cambio Fijo: r = r*
+        const r_eq = p.rstar;
+        
+        // Y de equilibrio (Intersección IS y BP horizontal)
+        // IS: Y = multiplier * (A + x1*E - b*r)
+        const Y_eq = multiplier * (A_autonomous + p.x1 * p.E - p.b * r_eq);
+        
+        // M endógeno (Para que LM pase por ese punto)
+        // LM: M = k*Y - h*r
+        const M_eq = p.k * Y_eq - p.h * r_eq;
+        
+        // NX
+        // NX = x1*E - m1*Y (Simplificado, asumiendo NX0=0)
+        const NX_eq = p.x1 * p.E - p.m1 * Y_eq;
+        
+        // Déficit Fiscal
+        const Fiscal_eq = p.G - p.T;
+
+        return { Y: Y_eq, r: r_eq, M: M_eq, NX: NX_eq, K: multiplier, Fiscal: Fiscal_eq, A: A_autonomous };
+    }
+
+    // Generar puntos para las curvas
+    function getCurvePoints(p, scenarioParams = null) {
+        // Usar params del escenario si existen, sino los actuales
+        const currP = scenarioParams || p;
+        
+        const r_min = 0;
+        const r_max = 15;
+        const steps = 50;
+        const pointsIS = [];
+        const pointsLM = [];
+        const pointsBP = [];
+
+        // Curva BP: r = r* (Horizontal)
+        pointsBP.push({x: 0, y: currP.rstar});
+        pointsBP.push({x: 300, y: currP.rstar}); // Asumiendo Y max ~300
+
+        // Curva IS: r = (A + x1*E - Y*(1-c1+m1)) / b
+        // Despejamos r para varios Y
+        const slopeIS = -(1 - currP.c1 + currP.m1) / currP.b;
+        const interceptIS = (currP.A + currP.x1 * currP.E) / currP.b;
+        
+        for(let i=0; i<=steps; i++) {
+            const Y = i * 6; // 0 a 300
+            const r = interceptIS + slopeIS * Y;
+            if(r >= r_min && r <= r_max) pointsIS.push({x: Y, y: r});
+        }
+
+        // Curva LM: r = (k*Y - M) / h
+        // Nota: En este simulador M es endógeno para el equilibrio principal, 
+        // pero para dibujar la curva LM necesitamos un M fijo.
+        // Para el gráfico principal, usamos el M calculado en el equilibrio para que pase por el punto.
+        const slopeLM = currP.k / currP.h;
+        const interceptLM = -currP.M / currP.h;
+        
+        for(let i=0; i<=steps; i++) {
+            const Y = i * 6;
+            const r = slopeLM * Y + interceptLM;
+            if(r >= r_min && r <= r_max) pointsLM.push({x: Y, y: r});
+        }
+
+        return { IS: pointsIS, LM: pointsLM, BP: pointsBP };
+    }
+
+    // Función Principal de Actualización
+    function updateModel() {
+        const p = getParams();
+        updateDisplays(p);
+        
+        const eq = calculateEquilibrium(p);
+        state = { ...p, ...eq }; // Guardar estado global
+
+        // Actualizar Resultados
+        document.getElementById('res-Y').textContent = eq.Y.toFixed(1);
+        document.getElementById('res-r').textContent = eq.r.toFixed(1) + '%';
+        document.getElementById('res-M').textContent = eq.M.toFixed(1);
+        document.getElementById('res-NX').textContent = eq.NX.toFixed(1);
+        document.getElementById('res-K').textContent = eq.K.toFixed(2);
+        
+        const fiscalEl = document.getElementById('res-Fiscal');
+        fiscalEl.textContent = eq.Fiscal.toFixed(1);
+        fiscalEl.style.color = eq.Fiscal > 0 ? 'var(--danger)' : (eq.Fiscal < 0 ? 'var(--success)' : 'var(--primary)');
+
+        // Actualizar Textos de Ayuda
+        updateEffectsText(p);
+        updateRecommendations(eq);
+
+        // Dibujar Gráfico Principal
+        drawMainChart(p, eq);
+    }
+
+    function updateEffectsText(p) {
+        const list = document.getElementById('effectsList');
+        list.innerHTML = `
+            <div class="effect-item">↑ <strong>Gasto (G):</strong> Desplaza IS derecha. Aumenta Y. Requiere ↑ M para mantener r=r*.</div>
+            <div class="effect-item">↑ <strong>Impuestos (T):</strong> Desplaza IS izquierda. Reduce Y. Requiere ↓ M.</div>
+            <div class="effect-item">↑ <strong>Tipo de Cambio (E):</strong> Desplaza IS derecha (mejora NX). Aumenta Y.</div>
+            <div class="effect-item">↑ <strong>r*:</strong> Sube la línea BP. Si no hay intervención, habría fuga de capitales. El BC debe reducir M para subir r interna (contracción).</div>
+        `;
+    }
+
+    function updateRecommendations(eq) {
+        const rec = document.getElementById('recText');
+        let msg = "";
+        
+        if (eq.NX > 5) msg = "Hay un fuerte superávit comercial. Podría considerar apreciar la moneda (si fuera flexible) o acumular reservas. Cuidado con presiones inflacionarias por entrada de divisas.";
+        else if (eq.NX < -5) msg = "Hay déficit comercial. Con tipo de cambio fijo, esto drena reservas internacionales. Debería reducir el gasto público (G) o devaluar (aumentar E) si la presión sobre reservas es insostenible.";
+        else msg = "La balanza comercial está relativamente equilibrada. La política fiscal actual es sostenible en términos externos.";
+
+        if (eq.Fiscal > 10) msg += " <br><strong>Alerta:</strong> Déficit fiscal alto. Considere ajustar T o G.";
+        
+        rec.innerHTML = msg;
+    }
+
+    // Configuración del Gráfico Principal
+    function initMainChart() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 400, easing: 'easeOutQuart' },
+                scales: {
+                    x: { type: 'linear', position: 'bottom', title: {display: true, text: 'Ingreso (Y)'}, min: 0, max: 300 },
+                    y: { title: {display: true, text: 'Tasa de Interés (r)'}, min: 0, max: 15 }
+                },
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false },
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    }
+
+    function drawMainChart(p, eq) {
+        const curves = getCurvePoints(p);
+        
+        mainChart.data.datasets = [
+            {
+                label: 'IS',
+                data: curves.IS,
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                borderWidth: 3,
+                pointRadius: 0,
+                fill: false
+            },
+            {
+                label: 'LM',
+                data: curves.LM,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                pointRadius: 0,
+                fill: false
+            },
+            {
+                label: 'BP (r*)',
+                data: curves.BP,
+                borderColor: '#2ecc71',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            },
+            {
+                label: 'Equilibrio',
+                data: [{x: eq.Y, y: eq.r}],
+                pointRadius: 8,
+                pointBackgroundColor: '#f39c12',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                showLine: false
+            }
+        ];
+        mainChart.update();
+    }
+
+    // --- LÓGICA DE COMPARACIÓN Y MOVIMIENTO ---
+
+    function openCompareModal() {
+        const p = getParams();
+        // Llenar valores iniciales con los actuales
+        ['G', 'T', 'E', 'rstar'].forEach(v => {
+            document.getElementById(`init-${v}`).value = p[v];
+            document.getElementById(`final-${v}`).value = p[v]; // Iniciar finales iguales
+        });
+        document.getElementById('compareModal').style.display = "block";
+    }
+
+    function closeCompareModal() {
+        document.getElementById('compareModal').style.display = "none";
+    }
+
+    // Cerrar modal si clic fuera
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('compareModal')) {
+            closeCompareModal();
+        }
+    }
+
+    function runComparison() {
+        // Leer valores
+        const initVals = {
+            G: parseFloat(document.getElementById('init-G').value),
+            T: parseFloat(document.getElementById('init-T').value),
+            E: parseFloat(document.getElementById('init-E').value),
+            rstar: parseFloat(document.getElementById('init-rstar').value)
+        };
+        const finalVals = {
+            G: parseFloat(document.getElementById('final-G').value),
+            T: parseFloat(document.getElementById('final-T').value),
+            E: parseFloat(document.getElementById('final-E').value),
+            rstar: parseFloat(document.getElementById('final-rstar').value)
+        };
+
+        // Obtener parámetros estructurales fijos
+        const structP = {
+            c1: parseFloat(document.getElementById('c1').value),
+            m1: parseFloat(document.getElementById('m1').value),
+            b: parseFloat(document.getElementById('b').value),
+            h: parseFloat(document.getElementById('h').value),
+            k: parseFloat(document.getElementById('k').value),
+            x1: parseFloat(document.getElementById('x1').value)
+        };
+
+        // 1. Calcular Escenario Inicial Completo
+        const pInit = { ...structP, ...initVals };
+        const A_init = 10 + pInit.G - pInit.c1 * pInit.T;
+        const eqInit = calculateEquilibrium(pInit); 
+        // Recalcular puntos init con A calculado
+        pInit.A = A_init;
+        pInit.M = eqInit.M; 
+        const curvesInit = getCurvePoints(pInit);
+
+        // 2. Escenario Intermedio A: Solo cambia IS (G, T, E, r* cambian, pero M se mantiene en nivel inicial para ver movimiento puro de IS contra LM antigua? 
+        // No, la solicitud es: "Gráfica donde muestre como se movió la IS".
+        // Interpretación: Mostrar IS_inicial vs IS_final, manteniendo LM y BP en su estado inicial (o promedio).
+        // Para mostrar el efecto aislado:
+        // Gráfico 1 (Movimiento IS): Muestra IS_init, IS_final. LM se fija en M_init. BP se fija en r*_init.
+        
+        const pMid_IS = { ...structP, ...finalVals, M: eqInit.M, rstar: initVals.rstar }; // Usa r* init para BP fija
+        const A_midIS = 10 + pMid_IS.G - pMid_IS.c1 * pMid_IS.T;
+        pMid_IS.A = A_midIS;
+        const curvesMidIS = getCurvePoints(pMid_IS);
+
+        // 3. Escenario Intermedio B: Solo cambia LM (Ajuste monetario).
+        // Partimos de la IS final, pero queremos ver cómo LM se mueve para alcanzar el nuevo equilibrio.
+        // O mejor: Mostrar LM_init vs LM_final. IS se fija en IS_final.
+        // Calculamos el equilibrio final completo primero para saber cuál es la M final necesaria.
+        const pFinal = { ...structP, ...finalVals };
+        const A_final = 10 + pFinal.G - pFinal.c1 * pFinal.T;
+        const eqFinal = calculateEquilibrium(pFinal);
+        pFinal.A = A_final;
+        pFinal.M = eqFinal.M;
+        const curvesFinal = getCurvePoints(pFinal);
+
+        // Preparar datos para Gráfico 1: Movimiento IS (LM y BP fijas en inicial)
+        const dataMoveIS = {
+            labels: [],
+            datasets: [
+                { label: 'IS Inicial', data: curvesInit.IS, borderColor: '#e74c3c', borderWidth: 2, borderDash: [5,5] },
+                { label: 'IS Final', data: curvesMidIS.IS, borderColor: '#c0392b', borderWidth: 3 },
+                { label: 'LM (Fija)', data: curvesInit.LM, borderColor: '#3498db', borderWidth: 1, opacity: 0.5 },
+                { label: 'BP (Fija)', data: curvesInit.BP, borderColor: '#2ecc71', borderWidth: 1, opacity: 0.5 }
+            ]
+        };
+
+        // Preparar datos para Gráfico 2: Movimiento LM (IS fija en final, BP fija en final)
+        // Aquí mostramos cómo LM debe moverse (de M_init a M_final) para cortar a la nueva IS en la nueva BP.
+        // Pero para visualizar el "movimiento de LM", comparamos LM_init vs LM_final.
+        const dataMoveLM = {
+            labels: [],
+            datasets: [
+                { label: 'IS (Fija Final)', data: curvesMidIS.IS, borderColor: '#e74c3c', borderWidth: 1, opacity: 0.5 },
+                { label: 'LM Inicial', data: curvesInit.LM, borderColor: '#3498db', borderWidth: 2, borderDash: [5,5] },
+                { label: 'LM Final', data: curvesFinal.LM, borderColor: '#2980b9', borderWidth: 3 },
+                { label: 'BP (Fija Final)', data: curvesFinal.BP, borderColor: '#2ecc71', borderWidth: 1, opacity: 0.5 }
+            ]
+        };
+
+        // Preparar datos para Gráfico 3: Resultado Combinado
+        const dataMoveFinal = {
+            labels: [],
+            datasets: [
+                { label: 'IS Inicial', data: curvesInit.IS, borderColor: '#e74c3c', borderWidth: 1, opacity: 0.4 },
+                { label: 'IS Final', data: curvesFinal.IS, borderColor: '#c0392b', borderWidth: 2 },
+                { label: 'LM Inicial', data: curvesInit.LM, borderColor: '#3498db', borderWidth: 1, opacity: 0.4 },
+                { label: 'LM Final', data: curvesFinal.LM, borderColor: '#2980b9', borderWidth: 2 },
+                { label: 'BP Inicial', data: curvesInit.BP, borderColor: '#2ecc71', borderWidth: 1, opacity: 0.4 },
+                { label: 'BP Final', data: curvesFinal.BP, borderColor: '#27ae60', borderWidth: 2 },
+                { label: 'Eq. Inicial', data: [{x: eqInit.Y, y: eqInit.r}], pointRadius: 6, backgroundColor: '#e74c3c', showLine: false },
+                { label: 'Eq. Final', data: [{x: eqFinal.Y, y: eqFinal.r}], pointRadius: 8, backgroundColor: '#2980b9', showLine: false }
+            ]
+        };
+
+        // Renderizar o Actualizar Gráficos de Comparación
+        renderComparisonCharts(dataMoveIS, dataMoveLM, dataMoveFinal);
+        
+        // Mostrar área
+        document.getElementById('comparisonChartsArea').style.display = 'block';
+        closeCompareModal();
+        
+        // Scroll suave hacia los gráficos
+        document.getElementById('comparisonChartsArea').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderComparisonCharts(d1, d2, d3) {
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { type: 'linear', position: 'bottom', min: 0, max: 300, title: {display: true, text: 'Y'} },
+                y: { min: 0, max: 15, title: {display: true, text: 'r'} }
+            },
+            plugins: { legend: { position: 'bottom', labels: {boxWidth: 10, font: {size: 10}} } }
+        };
+
+        // Gráfico 1
+        if(chartMoveIS) chartMoveIS.destroy();
+        chartMoveIS = new Chart(document.getElementById('chartMoveIS'), {
+            type: 'line', data: d1, options: commonOptions
+        });
+
+        // Gráfico 2
+        if(chartMoveLM) chartMoveLM.destroy();
+        chartMoveLM = new Chart(document.getElementById('chartMoveLM'), {
+            type: 'line', data: d2, options: commonOptions
+        });
+
+        // Gráfico 3
+        if(chartMoveFinal) chartMoveFinal.destroy();
+        chartMoveFinal = new Chart(document.getElementById('chartMoveFinal'), {
+            type: 'line', data: d3, options: commonOptions
+        });
+    }
+
+</script>
+
+</body>
+</html>
